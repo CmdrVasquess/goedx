@@ -15,6 +15,7 @@ func SaveJSON(file string, data interface{}) error {
 	}
 	defer wr.Close()
 	enc := json.NewEncoder(wr)
+	enc.SetIndent("", "\t")
 	if err = enc.Encode(data); err != nil {
 		return err
 	}
@@ -37,6 +38,13 @@ type EDState struct {
 	// Is modified w/o using Lock!
 	LastEvent time.Time
 	Cmdr      *Commander `json:"-"`
+}
+
+func (es *EDState) MustCommander() *Commander {
+	if es.Cmdr == nil {
+		panic("no current commander")
+	}
+	return es.Cmdr
 }
 
 func NewEDState() *EDState {
@@ -70,16 +78,22 @@ type Commander struct {
 	FID    string
 	Name   string
 	ShipID int
+	Loc    JSONLocation
 	Ships  []*Ship
-	Mats   struct {
-		Raw map[string]Material
-		Man map[string]Material
-		Enc map[string]Material
-	}
+	Mats   Materials
 	inShip *Ship
 }
 
 func (cmdr *Commander) FindShip(id int) *Ship {
+	if id < 0 {
+		return nil
+	}
+	if cmdr.ShipID == id {
+		if cmdr.inShip == nil || cmdr.inShip.ID != id {
+			panic("assert failed: ship id mismatch")
+		}
+		return cmdr.inShip
+	}
 	for i := range cmdr.Ships {
 		s := cmdr.Ships[i]
 		if s.ID == id {
@@ -91,7 +105,7 @@ func (cmdr *Commander) FindShip(id int) *Ship {
 
 func (cmdr *Commander) GetShip(id int) *Ship {
 	res := cmdr.FindShip(id)
-	if res != nil {
+	if res == nil {
 		res := &Ship{ID: id}
 		cmdr.Ships = append(cmdr.Ships, res)
 	}
@@ -104,6 +118,7 @@ func (cmdr *Commander) SetShip(id int) *Ship {
 		return nil
 	}
 	res := cmdr.GetShip(id)
+	cmdr.ShipID = res.ID
 	cmdr.inShip = res
 	res.Berth = nil
 	return res
@@ -124,8 +139,14 @@ type Ship struct {
 	Type  string
 	Ident string
 	Name  string
-	Berth *Port
-	Sold  time.Time `json:",omitempty"`
+	Berth *Port      `json:",omitempty"`
+	Sold  *time.Time `json:",omitempty"`
+}
+
+type Materials struct {
+	Raw map[string]Material
+	Man map[string]Material
+	Enc map[string]Material
 }
 
 type Material struct {

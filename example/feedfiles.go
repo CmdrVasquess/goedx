@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 
@@ -15,7 +16,29 @@ var (
 	ext   = edgx.New(state)
 )
 
+func feed(rd io.Reader) {
+	scn := bufio.NewScanner(rd)
+	for scn.Scan() {
+		line := scn.Bytes()
+		_, evt, err := events.Peek(line)
+		if err != nil {
+			log.Println(err)
+		} else if et := events.EventType(evt); et == nil {
+			log.Printf("unknown event type: '%s'", evt)
+		} else {
+			ext.EventHandler(et, line)
+		}
+	}
+}
+
+func feedFile(name string) {
+	rd, _ := os.Open(name)
+	defer rd.Close()
+	feed(rd)
+}
+
 func main() {
+	log.SetFlags(log.Lshortfile)
 	ext.CmdrFile = func(cmdr *edgx.Commander) string {
 		return fmt.Sprintf("./%s.json", cmdr.FID)
 	}
@@ -27,16 +50,11 @@ func main() {
 		}
 		state.Save("edgx-state.json")
 	}()
-	scn := bufio.NewScanner(os.Stdin)
-	for scn.Scan() {
-		line := scn.Bytes()
-		_, evt, err := events.Peek(line)
-		if err != nil {
-			log.Println(err)
-		} else if et := events.EventType(evt); et == nil {
-			log.Printf("unknown event type: '%s'", evt)
-		} else {
-			ext.EventHandler(et, line)
+	if len(os.Args) < 2 {
+		feed(os.Stdin)
+	} else {
+		for _, arg := range os.Args[1:] {
+			feedFile(arg)
 		}
 	}
 }

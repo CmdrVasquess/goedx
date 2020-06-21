@@ -12,7 +12,7 @@ func init() {
 func ehLoadout(ext *Extension, e events.Event) {
 	evt := e.(*journal.Loadout)
 	ext.EdState.Write(func() error {
-		cmdr := ext.EdState.Cmdr
+		cmdr := ext.EdState.MustCommander()
 		ship := cmdr.SetShip(evt.ShipID)
 		ship.Type = evt.Ship
 		ship.Ident = evt.ShipIdent

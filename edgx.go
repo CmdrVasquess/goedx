@@ -98,7 +98,10 @@ func (edgx *Extension) EventHandler(evtType events.Type, raw []byte) {
 	}
 	defer func() {
 		if p := recover(); p != nil {
-			log.Errora("event handler `panic` on `event`", p, string(raw))
+			log.Errora("`event type` handler `panic` on `event`",
+				evtType,
+				p,
+				string(raw))
 		}
 	}()
 	hdlr(edgx, event)

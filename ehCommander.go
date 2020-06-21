@@ -20,11 +20,17 @@ func ehCommander(ext *Extension, e events.Event) {
 					log.Errore(err)
 				}
 			}
-			cmdr = new(Commander)
-			ext.EdState.Cmdr = cmdr
+		}
+		cmdr = new(Commander)
+		if ext.CmdrFile != nil {
+			f := ext.CmdrFile(cmdr)
+			if err := cmdr.Load(f); err != nil {
+				log.Errore(err)
+			}
 		}
 		cmdr.FID = evt.FID
 		cmdr.Name = evt.Name
+		ext.EdState.Cmdr = cmdr
 		return nil
 	})
 }
