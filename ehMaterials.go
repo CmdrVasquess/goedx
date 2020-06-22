@@ -9,7 +9,7 @@ func init() {
 	stdEvtHdlrs[journal.MaterialsEvent.String()] = ehMaterials
 }
 
-func ehMaterials(ext *Extension, e events.Event) {
+func ehMaterials(ext *Extension, e events.Event) (chg Change) {
 	cpMats := func(sMats map[string]Material, jMats []journal.Material) map[string]Material {
 		res := make(map[string]Material)
 		for j := range jMats {
@@ -25,13 +25,11 @@ func ehMaterials(ext *Extension, e events.Event) {
 	}
 	evt := e.(*journal.Materials)
 	ext.EdState.Write(func() error {
-		cmdr := ext.EdState.Cmdr
-		if cmdr == nil {
-			panic("materials event without commander")
-		}
+		cmdr := ext.EdState.MustCommander()
 		cmdr.Mats.Raw = cpMats(cmdr.Mats.Raw, evt.Raw)
 		cmdr.Mats.Man = cpMats(cmdr.Mats.Man, evt.Manufactured)
 		cmdr.Mats.Enc = cpMats(cmdr.Mats.Enc, evt.Encoded)
 		return nil
 	})
+	return chg
 }

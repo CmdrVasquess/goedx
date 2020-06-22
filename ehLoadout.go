@@ -9,7 +9,7 @@ func init() {
 	stdEvtHdlrs[journal.LoadoutEvent.String()] = ehLoadout
 }
 
-func ehLoadout(ext *Extension, e events.Event) {
+func ehLoadout(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Loadout)
 	ext.EdState.Write(func() error {
 		cmdr := ext.EdState.MustCommander()
@@ -19,4 +19,5 @@ func ehLoadout(ext *Extension, e events.Event) {
 		ship.Name = evt.ShipName
 		return nil
 	})
+	return chg
 }

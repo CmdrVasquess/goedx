@@ -13,7 +13,7 @@ import (
 
 var (
 	state = edgx.NewEDState()
-	ext   = edgx.New(state)
+	ext   = edgx.New(state, edgx.EchoGalaxy)
 )
 
 func feed(rd io.Reader) {
@@ -46,7 +46,9 @@ func main() {
 	defer func() {
 		if cmdr := ext.EdState.Cmdr; cmdr != nil {
 			f := ext.CmdrFile(cmdr)
-			cmdr.Save(f)
+			if err := cmdr.Save(f); err != nil {
+				log.Println(err)
+			}
 		}
 		state.Save("edgx-state.json")
 	}()

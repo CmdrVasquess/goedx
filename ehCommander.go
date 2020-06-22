@@ -9,7 +9,7 @@ func init() {
 	stdEvtHdlrs[journal.CommanderEvent.String()] = ehCommander
 }
 
-func ehCommander(ext *Extension, e events.Event) {
+func ehCommander(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Commander)
 	ext.EdState.Write(func() error {
 		cmdr := ext.EdState.Cmdr
@@ -33,4 +33,5 @@ func ehCommander(ext *Extension, e events.Event) {
 		ext.EdState.Cmdr = cmdr
 		return nil
 	})
+	return chg
 }

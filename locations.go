@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"git.fractalqb.de/fractalqb/ggja"
+	"github.com/mitchellh/mapstructure"
 )
 
 type Location interface {
@@ -15,14 +16,15 @@ type Location interface {
 type System struct {
 	Addr uint64
 	Name string
-	Coos []float32
+	Coos SysCoos
 }
 
 func (s *System) System() *System { return s }
 
 type Port struct {
-	Sys  *System
-	Name string
+	Sys    *System
+	Name   string
+	Docked bool
 }
 
 func (p *Port) System() *System { return p.Sys }
@@ -31,25 +33,28 @@ type JSONLocation struct {
 	Location
 }
 
+const jsonTypeTag = "@type"
+
+var jsonNull = []byte("null")
+
 func (jloc JSONLocation) MarshalJSON() ([]byte, error) {
-	t := map[string]interface{}{
-		"v": jloc.Location,
+	if jloc.Location == nil {
+		return jsonNull, nil
+	}
+	tmp := make(map[string]interface{})
+	err := mapstructure.Decode(jloc.Location, &tmp)
+	if err != nil {
+		return nil, err
 	}
 	switch jloc.Location.(type) {
+	case *System:
+		tmp[jsonTypeTag] = "system"
 	case *Port:
-		t["t"] = "port"
+		tmp[jsonTypeTag] = "port"
 	default:
 		return nil, fmt.Errorf("unknown location type '%T'", jloc.Location)
 	}
-	return json.Marshal(&t)
-}
-
-func fillSys(sys *System, obj *ggja.Obj) {
-	sys.Addr = obj.MUint64("Addr")
-	sys.Name = obj.MStr("Name")
-	for _, coo := range obj.MArr("Coos").Bare {
-		sys.Coos = append(sys.Coos, float32(coo.(float64)))
-	}
+	return json.Marshal(tmp)
 }
 
 func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
@@ -59,17 +64,18 @@ func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
 		return err
 	}
 	obj := ggja.Obj{Bare: tmp, OnError: func(e error) { err = e }}
-	loc := obj.MObj("v")
-	if err != nil {
-		return err
-	}
-	switch obj.Str("t", "") {
-	case "port":
-		p := &Port{Name: loc.MStr("Name"), Sys: new(System)}
-		if err != nil {
+	switch obj.Str(jsonTypeTag, "") {
+	case "system":
+		s := new(System)
+		if err := mapstructure.Decode(tmp, s); err != nil {
 			return err
 		}
-		fillSys(p.Sys, loc.MObj("Sys"))
+		jloc.Location = s
+	case "port":
+		p := new(Port)
+		if err := mapstructure.Decode(tmp, p); err != nil {
+			return err
+		}
 		jloc.Location = p
 	case "":
 		err = errors.New("missing @type attribute")

@@ -12,7 +12,7 @@ func ExamplePort() {
 		Sys: &System{
 			Addr: 4711,
 			Name: "Köln",
-			Coos: []float32{3, 2, 1},
+			Coos: ToSysCoos(3, 2, 1),
 		},
 		Name: "Hafen",
 	}
@@ -29,8 +29,8 @@ func ExamplePort() {
 	enc.Encode(&p)
 	os.Stdout.Write(sb.Bytes())
 	// Output:
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen"}
-	// {"t":"port","v":{"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen"}}
+	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen","Docked":false}
+	// {"@type":"port","Docked":false,"Name":"Hafen","Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]}}
 	// <nil>
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen"}
+	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen","Docked":false}
 }

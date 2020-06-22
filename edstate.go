@@ -77,6 +77,7 @@ func (ed *EDState) Load(file string) error {
 type Commander struct {
 	FID    string
 	Name   string
+	Ranks  Ranks
 	ShipID int
 	Loc    JSONLocation
 	Ships  []*Ship
@@ -85,14 +86,8 @@ type Commander struct {
 }
 
 func (cmdr *Commander) FindShip(id int) *Ship {
-	if id < 0 {
+	if id <= 0 {
 		return nil
-	}
-	if cmdr.ShipID == id {
-		if cmdr.inShip == nil || cmdr.inShip.ID != id {
-			panic("assert failed: ship id mismatch")
-		}
-		return cmdr.inShip
 	}
 	for i := range cmdr.Ships {
 		s := cmdr.Ships[i]
@@ -106,7 +101,7 @@ func (cmdr *Commander) FindShip(id int) *Ship {
 func (cmdr *Commander) GetShip(id int) *Ship {
 	res := cmdr.FindShip(id)
 	if res == nil {
-		res := &Ship{ID: id}
+		res = &Ship{ID: id}
 		cmdr.Ships = append(cmdr.Ships, res)
 	}
 	return res
@@ -131,8 +126,31 @@ func (cmdr *Commander) Save(file string) error {
 
 func (cmdr *Commander) Load(file string) error {
 	log.Infoa("load commander from `file`", file)
-	return LoadJSON(file, cmdr)
+	err := LoadJSON(file, cmdr)
+	cmdr.inShip = cmdr.FindShip(cmdr.ShipID)
+	return err
 }
+
+type Rank struct {
+	Level    int
+	Progress int
+}
+
+//go:generate stringer -type RankType
+type RankType int
+
+const (
+	Combat RankType = iota
+	Trade
+	Explore
+	CQC
+	Federation
+	Empire
+
+	RanksNum
+)
+
+type Ranks [RanksNum]Rank
 
 type Ship struct {
 	ID    int

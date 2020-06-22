@@ -20,6 +20,45 @@ type Status struct {
 	}
 }
 
+// Read: https://forums.frontier.co.uk/forums/elite-api-and-tools/
+const (
+	FStatusDocked StatusFlag = (1 << iota)
+	FStatusLanded
+	FStatusGearDown
+	FStatusShieldsUp
+	FStatusSupercruise
+
+	FStatusFAOff
+	FStatusHPDeployed
+	FStatusInWing
+	FStatusLightsOn
+	FStatusCSDeployed
+
+	FStatusSilentRun
+	FStatusFuelScooping
+	FStatusSrvHandbrake
+	FStatusSrvTurret
+	FStatusSrvUnderShip
+
+	FStatusSrvDriveAssist
+	FStatusFsdMassLock
+	FStatusFsdCharging
+	FStatusCooldown
+	FStatusLowFuel
+
+	FStatusOverHeat
+	FStatusHasLatLon
+	FStatusIsInDanger
+	FStatusInterdicted
+	FStatusInMainShip
+
+	FStatusInFighter
+	FStatusInSrv
+	FStatusHudAnalysis
+	FStatusNightVis
+	FStatusAltAvgR
+)
+
 func (s *Status) AnyFlag(fs StatusFlag) bool {
 	return s.Flags&fs > 0
 }

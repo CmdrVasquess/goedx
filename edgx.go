@@ -13,12 +13,16 @@ type Extension struct {
 	JournalDir   string
 	JournalAfter time.Time
 	EdState      *EDState
+	Galaxy       Galaxy
 	CmdrFile     func(*Commander) string
 	watch        *watched.JournalDir
 }
 
-func New(edState *EDState) *Extension {
-	return &Extension{EdState: edState}
+func New(edState *EDState, gxy Galaxy) *Extension {
+	if gxy == nil {
+		gxy = EchoGalaxy
+	}
+	return &Extension{EdState: edState, Galaxy: gxy}
 }
 
 func (edgx *Extension) Run(latestJournal bool) (err error) {
@@ -85,12 +89,13 @@ func (edgx *Extension) statChangeHandler(evtName string, file string) {
 	edgx.EventHandler(evtType, line)
 }
 
-var stdEvtHdlrs = make(map[string]func(*Extension, events.Event))
+var stdEvtHdlrs = make(map[string]func(*Extension, events.Event) Change)
 
 func (edgx *Extension) EventHandler(evtType events.Type, raw []byte) {
 	hdlr := stdEvtHdlrs[evtType.String()]
 	if hdlr == nil {
 		log.Debuga("no handler for `event type`", evtType)
+		return
 	}
 	event := evtType.New()
 	if err := json.Unmarshal(raw, event); err != nil {
