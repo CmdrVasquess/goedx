@@ -1,8 +1,8 @@
-package edgx
+package goedx
 
 import (
-	"github.com/CmdrVasquess/edgx/events"
-	"github.com/CmdrVasquess/edgx/journal"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
@@ -11,9 +11,9 @@ func init() {
 
 func ehSellShipOnRebuy(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.SellShipOnRebuy)
-	ext.EdState.Write(func() error {
-		sellShip(ext.EdState.MustCommander(), evt.Time, &evt.ShipSale)
+	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+		sellShip(cmdr, evt.Time, &evt.ShipSale)
 		return nil
-	})
+	}))
 	return 0
 }

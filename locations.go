@@ -1,4 +1,4 @@
-package edgx
+package goedx
 
 import (
 	"encoding/json"
@@ -31,6 +31,20 @@ func (p *Port) System() *System { return p.Sys }
 
 type JSONLocation struct {
 	Location
+}
+
+func (jl JSONLocation) System() *System {
+	if jl.Location == nil {
+		return nil
+	}
+	return jl.Location.System()
+}
+
+func (jl JSONLocation) Port() *Port {
+	if p, ok := jl.Location.(*Port); ok {
+		return p
+	}
+	return nil
 }
 
 const jsonTypeTag = "@type"

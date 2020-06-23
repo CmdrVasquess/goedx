@@ -1,5 +1,5 @@
 // +build !windows
 
-package edgx
+package goedx
 
 func FindJournals() (dir string, err error) { return ".", nil }

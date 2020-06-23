@@ -1,8 +1,8 @@
-package edgx
+package goedx
 
 import (
-	"github.com/CmdrVasquess/edgx/events"
-	"github.com/CmdrVasquess/edgx/journal"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
@@ -11,7 +11,7 @@ func init() {
 
 func ehCommander(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Commander)
-	ext.EdState.Write(func() error {
+	Must(ext.EdState.Write(func() error {
 		cmdr := ext.EdState.Cmdr
 		if cmdr != nil {
 			if ext.CmdrFile != nil {
@@ -21,7 +21,7 @@ func ehCommander(ext *Extension, e events.Event) (chg Change) {
 				}
 			}
 		}
-		cmdr = new(Commander)
+		cmdr = NewCommander()
 		if ext.CmdrFile != nil {
 			f := ext.CmdrFile(cmdr)
 			if err := cmdr.Load(f); err != nil {
@@ -32,6 +32,6 @@ func ehCommander(ext *Extension, e events.Event) (chg Change) {
 		cmdr.Name = evt.Name
 		ext.EdState.Cmdr = cmdr
 		return nil
-	})
+	}))
 	return chg
 }

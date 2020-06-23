@@ -1,6 +1,6 @@
 package journal
 
-import "github.com/CmdrVasquess/edgx/events"
+import "github.com/CmdrVasquess/goedx/events"
 
 type rankT string
 

@@ -1,8 +1,8 @@
-package edgx
+package goedx
 
 import (
-	"github.com/CmdrVasquess/edgx/events"
-	"github.com/CmdrVasquess/edgx/journal"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
@@ -17,10 +17,10 @@ func ehDocked(ext *Extension, e events.Event) (chg Change) {
 		Name:   evt.StationName,
 		Docked: true,
 	}
-	ext.EdState.Write(func() error {
-		cmdr := ext.EdState.MustCommander()
-		cmdr.Loc.Location = loc
+	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+		cmdr.At.Location = loc
+		chg = ChgLocation
 		return nil
-	})
+	}))
 	return chg
 }

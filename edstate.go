@@ -1,10 +1,20 @@
-package edgx
+package goedx
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
+	"strings"
 	"sync"
 	"time"
+)
+
+const (
+	ChgGame Change = (1 << iota)
+	ChgCommander
+	ChgLocation
+
+	ChgTopNum = 3
 )
 
 func SaveJSON(file string, data interface{}) error {
@@ -36,20 +46,53 @@ func LoadJSON(file string, into interface{}) error {
 type EDState struct {
 	Lock sync.RWMutex `json:"-"`
 	// Is modified w/o using Lock!
-	LastEvent time.Time
+	EDVersion string
+	Beta      bool
+	Language  string
+	L10n      struct {
+		Lang   string
+		Region string
+	}
 	Cmdr      *Commander `json:"-"`
+	LastEvent time.Time
 }
 
-func (es *EDState) MustCommander() *Commander {
-	if es.Cmdr == nil {
-		panic("no current commander")
-	}
-	return es.Cmdr
-}
+const msgNoCmdr = "no current commander"
 
 func NewEDState() *EDState {
 	res := &EDState{}
 	return res
+}
+
+func (es *EDState) SetEDVersion(v string) {
+	es.EDVersion = v
+	es.Beta = strings.Index(strings.ToLower(v), "beta") >= 0
+}
+
+var langMap = map[string]string{
+	"English": "en",
+}
+
+func (es *EDState) SetLanguage(lang string) {
+	es.Language = lang
+	split := strings.Split(lang, "\\")
+	if len(split) != 2 {
+		log.Errora("cannot partse `language`", lang)
+		es.L10n.Lang = ""
+		es.L10n.Region = ""
+	}
+	es.L10n.Lang = langMap[split[0]]
+	if es.L10n.Lang == "" {
+		log.Warna("unknown `language`", split[0])
+	}
+	es.L10n.Region = split[1]
+}
+
+func (es *EDState) MustCommander() *Commander {
+	if es.Cmdr == nil {
+		panic(msgNoCmdr)
+	}
+	return es.Cmdr
 }
 
 func (es *EDState) Read(do func() error) error {
@@ -62,6 +105,15 @@ func (es *EDState) Write(do func() error) error {
 	es.Lock.Lock()
 	defer es.Lock.Unlock()
 	return do()
+}
+
+func (es *EDState) WriteCmdr(do func(*Commander) error) error {
+	es.Lock.Lock()
+	defer es.Lock.Unlock()
+	if es.Cmdr == nil {
+		return errors.New(msgNoCmdr)
+	}
+	return do(es.Cmdr)
 }
 
 func (ed *EDState) Save(file string) error {
@@ -79,30 +131,30 @@ type Commander struct {
 	Name   string
 	Ranks  Ranks
 	ShipID int
-	Loc    JSONLocation
-	Ships  []*Ship
+	At     JSONLocation
+	Ships  map[int]*Ship
 	Mats   Materials
 	inShip *Ship
+}
+
+func NewCommander() *Commander {
+	return &Commander{
+		Ships: make(map[int]*Ship),
+	}
 }
 
 func (cmdr *Commander) FindShip(id int) *Ship {
 	if id <= 0 {
 		return nil
 	}
-	for i := range cmdr.Ships {
-		s := cmdr.Ships[i]
-		if s.ID == id {
-			return s
-		}
-	}
-	return nil
+	return cmdr.Ships[id]
 }
 
 func (cmdr *Commander) GetShip(id int) *Ship {
 	res := cmdr.FindShip(id)
 	if res == nil {
-		res = &Ship{ID: id}
-		cmdr.Ships = append(cmdr.Ships, res)
+		res = new(Ship)
+		cmdr.Ships[id] = res
 	}
 	return res
 }
@@ -110,13 +162,26 @@ func (cmdr *Commander) GetShip(id int) *Ship {
 func (cmdr *Commander) SetShip(id int) *Ship {
 	if id < 0 {
 		cmdr.inShip = nil
+		cmdr.ShipID = -1
 		return nil
 	}
 	res := cmdr.GetShip(id)
-	cmdr.ShipID = res.ID
+	cmdr.ShipID = id
 	cmdr.inShip = res
 	res.Berth = nil
 	return res
+}
+
+func (cmdr *Commander) StoreCurrentShip() {
+	cmdr.ShipID = -1
+	if cmdr.inShip == nil {
+		return
+	}
+	ship := cmdr.inShip
+	cmdr.inShip = nil
+	if port := cmdr.At.Port(); port != nil {
+		ship.Berth = port
+	}
 }
 
 func (cmdr *Commander) Save(file string) error {
@@ -153,7 +218,6 @@ const (
 type Ranks [RanksNum]Rank
 
 type Ship struct {
-	ID    int
 	Type  string
 	Ident string
 	Name  string

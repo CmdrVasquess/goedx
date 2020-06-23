@@ -1,4 +1,4 @@
-package edgx
+package goedx
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package edgx
+package goedx
 
 type Galaxy interface {
 	EdgxSystem(addr uint64, name string, coos []float32) (*System, interface{})
@@ -21,4 +21,9 @@ func (_ echoGxy) EdgxSystem(addr uint64, name string, coos []float32) (*System, 
 		res.Coos[l].Set(coos[l], 0)
 	}
 	return res, nil
+}
+
+type InMemGalaxy map[uint64]*System
+
+func (g InMemGalaxy) EdgxSystem(addr uint64, name string, coos []float32) (*System, interface{}) {
 }

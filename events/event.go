@@ -62,4 +62,12 @@ func EventType(event string) Type {
 	return eventTypes[event]
 }
 
+func EventNames() []string {
+	res := make([]string, 0, len(eventTypes))
+	for nm := range eventTypes {
+		res = append(res, nm)
+	}
+	return res
+}
+
 var eventTypes = make(map[string]Type)

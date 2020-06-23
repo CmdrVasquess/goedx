@@ -1,4 +1,4 @@
-package edgx
+package goedx
 
 import (
 	"git.fractalqb.de/fractalqb/c4hgol"
@@ -7,6 +7,6 @@ import (
 )
 
 var (
-	log    = qbsllm.New(qbsllm.Lnormal, "edgx", nil, nil)
+	log    = qbsllm.New(qbsllm.Lnormal, "goedx", nil, nil)
 	LogCfg = c4hgol.Config(qbsllm.NewConfig(log), watched.LogCfg)
 )

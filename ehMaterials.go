@@ -1,8 +1,8 @@
-package edgx
+package goedx
 
 import (
-	"github.com/CmdrVasquess/edgx/events"
-	"github.com/CmdrVasquess/edgx/journal"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
@@ -24,12 +24,11 @@ func ehMaterials(ext *Extension, e events.Event) (chg Change) {
 		return res
 	}
 	evt := e.(*journal.Materials)
-	ext.EdState.Write(func() error {
-		cmdr := ext.EdState.MustCommander()
+	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
 		cmdr.Mats.Raw = cpMats(cmdr.Mats.Raw, evt.Raw)
 		cmdr.Mats.Man = cpMats(cmdr.Mats.Man, evt.Manufactured)
 		cmdr.Mats.Enc = cpMats(cmdr.Mats.Enc, evt.Encoded)
 		return nil
-	})
+	}))
 	return chg
 }
