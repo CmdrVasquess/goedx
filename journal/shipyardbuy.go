@@ -11,8 +11,9 @@ func (t shipyardbuyT) String() string    { return string(t) }
 
 type ShipyardBuy struct {
 	events.Common
-	StoreShipID int
 	ShipPrice   int64
+	StoreShipID int
+	SellShipID  int
 }
 
 func init() {

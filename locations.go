@@ -19,6 +19,38 @@ type System struct {
 	Coos SysCoos
 }
 
+func NewSystem(addr uint64, name string, coos ...float32) *System {
+	res := &System{Addr: addr}
+	res.Set(name, coos...)
+	return res
+}
+
+func (s *System) Set(name string, coos ...float32) {
+	s.Name = name
+	l := len(coos)
+	if l > 3 {
+		l = 3
+	}
+	for l--; l >= 0; l-- {
+		s.Coos[l] = ChgF32(coos[l])
+	}
+}
+
+func (s *System) Same(name string, coos ...float32) bool {
+	if s.Name != name {
+		return false
+	}
+	if len(coos) != 3 {
+		return false
+	}
+	for i, r := range coos {
+		if s.Coos[i] != ChgF32(r) {
+			return false
+		}
+	}
+	return true
+}
+
 func (s *System) System() *System { return s }
 
 type Port struct {

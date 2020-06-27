@@ -11,17 +11,17 @@ func init() {
 	stdEvtHdlrs[journal.ShipyardSellEvent.String()] = ehShipyardSell
 }
 
-func sellShip(cmdr *Commander, t time.Time, evt *journal.ShipSale) {
-	ship := cmdr.FindShip(evt.SellShipID)
+func sellShip(cmdr *Commander, t time.Time, shipId int) {
+	ship := cmdr.FindShip(shipId)
 	if ship == nil {
 		log.Warna("mssing ship `id` for `event`",
-			evt.SellShipID,
+			shipId,
 			journal.SellShipOnRebuyEvent)
 		return
 	}
 	ship.Sold = new(time.Time)
 	*ship.Sold = t
-	if cmdr.ShipID == evt.SellShipID {
+	if cmdr.ShipID == shipId {
 		cmdr.ShipID = -1
 		cmdr.inShip = nil
 	}
@@ -30,7 +30,7 @@ func sellShip(cmdr *Commander, t time.Time, evt *journal.ShipSale) {
 func ehShipyardSell(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.ShipyardSell)
 	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
-		sellShip(cmdr, evt.Time, &evt.ShipSale)
+		sellShip(cmdr, evt.Time, evt.SellShipID)
 		return nil
 	}))
 	return 0

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -44,7 +45,8 @@ func LoadJSON(file string, into interface{}) error {
 }
 
 type EDState struct {
-	Lock sync.RWMutex `json:"-"`
+	Lock         sync.RWMutex `json:"-"`
+	GoEDXversion struct{ Major, Minor, Patch int }
 	// Is modified w/o using Lock!
 	EDVersion string
 	Beta      bool
@@ -54,13 +56,16 @@ type EDState struct {
 		Region string
 	}
 	Cmdr      *Commander `json:"-"`
-	LastEvent time.Time
+	LastJournalEvent time.Time
 }
 
 const msgNoCmdr = "no current commander"
 
 func NewEDState() *EDState {
 	res := &EDState{}
+	res.GoEDXversion.Major = Major
+	res.GoEDXversion.Minor = Minor
+	res.GoEDXversion.Patch = Patch
 	return res
 }
 
@@ -71,6 +76,7 @@ func (es *EDState) SetEDVersion(v string) {
 
 var langMap = map[string]string{
 	"English": "en",
+	"German":  "de",
 }
 
 func (es *EDState) SetLanguage(lang string) {
@@ -116,9 +122,15 @@ func (es *EDState) WriteCmdr(do func(*Commander) error) error {
 	return do(es.Cmdr)
 }
 
-func (ed *EDState) Save(file string) error {
+func (ed *EDState) Save(file string, cmdrFile string) error {
 	log.Infoa("save state to `file`", file)
-	return SaveJSON(file, ed)
+	err := SaveJSON(file, ed)
+	if cmdrFile != "" && ed.Cmdr != nil && ed.Cmdr.FID != "" {
+		if err := ed.Cmdr.Save(cmdrFile); err != nil {
+			log.Errore(err)
+		}
+	}
+	return err
 }
 
 func (ed *EDState) Load(file string) error {
@@ -137,8 +149,9 @@ type Commander struct {
 	inShip *Ship
 }
 
-func NewCommander() *Commander {
+func NewCommander(fid string) *Commander {
 	return &Commander{
+		FID:   fid,
 		Ships: make(map[int]*Ship),
 	}
 }
@@ -172,7 +185,9 @@ func (cmdr *Commander) SetShip(id int) *Ship {
 	return res
 }
 
-func (cmdr *Commander) StoreCurrentShip() {
+// shipId == 0 => caller has no idea of id
+func (cmdr *Commander) StoreCurrentShip(shipId int) {
+	// TODO check consistency of IDs
 	cmdr.ShipID = -1
 	if cmdr.inShip == nil {
 		return
@@ -185,6 +200,13 @@ func (cmdr *Commander) StoreCurrentShip() {
 }
 
 func (cmdr *Commander) Save(file string) error {
+	dir := filepath.Dir(file)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		log.Infoa("create `commander` `dir`", cmdr.Name, dir)
+		if err := os.Mkdir(dir, 0777); err != nil {
+			log.Errore(err)
+		}
+	}
 	log.Infoa("save `commander` with `fid` to `file`", cmdr.Name, cmdr.FID, file)
 	return SaveJSON(file, cmdr)
 }

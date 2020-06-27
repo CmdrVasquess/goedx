@@ -14,11 +14,12 @@ func _() {
 	_ = x[CQC-3]
 	_ = x[Federation-4]
 	_ = x[Empire-5]
+	_ = x[RanksNum-6]
 }
 
-const _RankType_name = "CombatTradeExploreCQCFederationEmpire"
+const _RankType_name = "CombatTradeExploreCQCFederationEmpireRanksNum"
 
-var _RankType_index = [...]uint8{0, 6, 11, 18, 21, 31, 37}
+var _RankType_index = [...]uint8{0, 6, 11, 18, 21, 31, 37, 45}
 
 func (i RankType) String() string {
 	if i < 0 || i >= RankType(len(_RankType_index)-1) {

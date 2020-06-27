@@ -13,7 +13,7 @@ func ehCommander(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Commander)
 	Must(ext.EdState.Write(func() error {
 		cmdr := ext.EdState.Cmdr
-		if cmdr != nil {
+		if cmdr != nil && cmdr.FID != "" {
 			if ext.CmdrFile != nil {
 				f := ext.CmdrFile(cmdr)
 				if err := cmdr.Save(f); err != nil {
@@ -21,8 +21,8 @@ func ehCommander(ext *Extension, e events.Event) (chg Change) {
 				}
 			}
 		}
-		cmdr = NewCommander()
-		if ext.CmdrFile != nil {
+		cmdr = NewCommander(evt.FID)
+		if evt.FID != "" && ext.CmdrFile != nil {
 			f := ext.CmdrFile(cmdr)
 			if err := cmdr.Load(f); err != nil {
 				log.Errore(err)

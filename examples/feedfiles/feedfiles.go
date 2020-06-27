@@ -3,10 +3,15 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+
+	"github.com/CmdrVasquess/goedx/apps/l10n"
+
+	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
 
 	"github.com/CmdrVasquess/goedx"
 	"github.com/CmdrVasquess/goedx/events"
@@ -29,10 +34,10 @@ func feed(rd io.Reader) {
 		if err != nil {
 			log.Print(err)
 			log.Fatalf("[%s]", string(line))
-		} else if et := events.EventType(evt); et == nil {
-			log.Printf("unknown event type: '%s'", evt)
-		} else if err = ext.EventHandler(et, line); err != nil {
-			log.Fatal(err)
+		} else if et := events.EventType(evt); et != nil {
+			if err = ext.EventHandler(et, line); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 }
@@ -45,6 +50,21 @@ func feedFile(name string) {
 
 func main() {
 	log.SetFlags(log.Lshortfile)
+	gxyFile := flag.String("galaxy", "", "set galaxy database file")
+	l10nDir := flag.String("l10n", "", "load/save l10ns to dir")
+	flag.Parse()
+	if *gxyFile != "" {
+		gxy, err := bboltgalaxy.Open(*gxyFile)
+		if err == nil {
+			ext.Galaxy = gxy
+			defer gxy.Close()
+		}
+	}
+	if *l10nDir != "" {
+		l10nApp := l10n.New(*l10nDir, state)
+		ext.AddApp("l10n", l10nApp)
+		defer l10nApp.Close()
+	}
 	{
 		e, h := ext.DiffEvtsHdls()
 		log.Println("events w/o handler:", e)
@@ -55,18 +75,18 @@ func main() {
 	}
 	state.Load("goedx-state.json")
 	defer func() {
-		if cmdr := ext.EdState.Cmdr; cmdr != nil {
+		if cmdr := ext.EdState.Cmdr; cmdr != nil && cmdr.FID != "" {
 			f := ext.CmdrFile(cmdr)
 			if err := cmdr.Save(f); err != nil {
 				log.Println(err)
 			}
 		}
-		state.Save("goedx-state.json")
+		state.Save("goedx-state.json", "")
 	}()
 	if len(os.Args) < 2 {
 		feed(os.Stdin)
 	} else {
-		for _, arg := range os.Args[1:] {
+		for _, arg := range flag.Args() {
 			feedFile(arg)
 		}
 	}
