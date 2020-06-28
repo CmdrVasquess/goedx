@@ -3,6 +3,8 @@ package goedx
 import (
 	"fmt"
 	"os"
+	"os/user"
+	"path/filepath"
 )
 
 var relJournalPath = []string{
@@ -13,8 +15,9 @@ var relJournalPath = []string{
 }
 
 func FindJournals() (dir string, err error) {
-	if usr, err := user.Current(); err != nil {
-		return "."
+	usr, err := user.Current()
+	if err != nil {
+		return ".", err
 	}
 	relJournalPath[0] = usr.HomeDir
 	res := filepath.Join(relJournalPath...)
