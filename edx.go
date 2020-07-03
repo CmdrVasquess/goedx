@@ -113,6 +113,35 @@ func (ext *Extension) jLineHandler(line []byte) {
 	ext.EventHandler(evtType, line)
 }
 
+func (ext *Extension) SwitchCommander(fid, name string) *Commander {
+	cmdr := ext.EdState.Cmdr
+	if cmdr != nil && cmdr.FID != "" {
+		if ext.CmdrFile != nil {
+			f := ext.CmdrFile(cmdr)
+			if err := cmdr.Save(f); err != nil {
+				log.Errore(err)
+			}
+		}
+	}
+	ext.EdState.Cmdr = nil
+	if fid == "" {
+		return nil
+	}
+	cmdr = NewCommander(fid)
+	if ext.CmdrFile != nil {
+		f := ext.CmdrFile(cmdr)
+		if err := cmdr.Load(f); err != nil {
+			log.Errore(err)
+		}
+	}
+	cmdr.FID = fid
+	if name != "" {
+		cmdr.Name = name
+	}
+	ext.EdState.Cmdr = cmdr
+	return cmdr
+}
+
 func (etx *Extension) statChangeHandler(evtName string, file string) {
 	evtType := events.EventType(evtName)
 	if evtType == nil {
@@ -188,7 +217,7 @@ func (ext *Extension) prepareApp(app App, nm string, e events.Event) interface{}
 			log.Errorf("app '%s' panics in prepare: %s", nm, p)
 		}
 	}()
-	return app.Prepare(e)
+	return app.PrepareEDEvent(e)
 }
 
 func (ext *Extension) finishApp(app App, nm string, tok interface{}, e events.Event, chg Change) {
@@ -197,5 +226,5 @@ func (ext *Extension) finishApp(app App, nm string, tok interface{}, e events.Ev
 			log.Errorf("app '%s' panic in finish: %s", nm, p)
 		}
 	}()
-	app.Finish(tok, e, chg)
+	app.FinishEDEvent(tok, e, chg)
 }

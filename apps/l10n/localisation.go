@@ -82,7 +82,7 @@ func getLang(edState *goedx.EDState) string {
 	return edState.L10n.Lang + "-" + edState.L10n.Region
 }
 
-func (loc *Locales) Prepare(e events.Event) interface{} {
+func (loc *Locales) PrepareEDEvent(e events.Event) interface{} {
 	switch e.(type) {
 	case *journal.Fileheader:
 		return getLang(loc.edState)
@@ -92,7 +92,7 @@ func (loc *Locales) Prepare(e events.Event) interface{} {
 	return nil
 }
 
-func (loc *Locales) Finish(token interface{}, e events.Event, chg goedx.Change) {
+func (loc *Locales) FinishEDEvent(token interface{}, e events.Event, chg goedx.Change) {
 	switch evt := e.(type) {
 	case *journal.ShipTargeted:
 		loc.finishShipTargeted(evt, chg)

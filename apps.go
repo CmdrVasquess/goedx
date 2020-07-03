@@ -3,8 +3,8 @@ package goedx
 import "github.com/CmdrVasquess/goedx/events"
 
 type App interface {
-	Prepare(e events.Event) (token interface{})
-	Finish(token interface{}, e events.Event, chg Change)
+	PrepareEDEvent(e events.Event) (token interface{})
+	FinishEDEvent(token interface{}, e events.Event, chg Change)
 }
 
 type AppChannel struct {
@@ -37,6 +37,6 @@ type finish struct {
 
 func (ac *AppChannel) run() {
 	for f := range ac.c {
-		ac.app.Finish(f.tok, f.evt, f.chg)
+		ac.app.FinishEDEvent(f.tok, f.evt, f.chg)
 	}
 }

@@ -4,12 +4,19 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
+	"time"
 
 	"github.com/CmdrVasquess/goedx"
 	bolt "go.etcd.io/bbolt"
 )
 
 type Galaxy bolt.DB
+
+type System struct {
+	goedx.System
+	FirstAccess time.Time
+	LastAccess  time.Time
+}
 
 func Open(file string) (*Galaxy, error) {
 	db, err := bolt.Open(file, 0666, nil)
@@ -32,7 +39,8 @@ func (g *Galaxy) EdgxSystem(
 	addr uint64,
 	name string,
 	coos []float32,
-) (res *goedx.System, tok interface{}) {
+) (sys *goedx.System, tok interface{}) {
+	var res *System
 	db := (*bolt.DB)(g)
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bktSystems)
@@ -41,17 +49,22 @@ func (g *Galaxy) EdgxSystem(
 			return nil
 		}
 		dec := gob.NewDecoder(bytes.NewReader(raw))
-		res := new(goedx.System)
+		res := new(System)
 		err := dec.Decode(res)
 		if err != nil {
 			res = nil
 		}
 		return err
 	})
+	now := time.Now()
 	if res == nil {
 		db.Update(func(tx *bolt.Tx) (err error) {
 			b := tx.Bucket(bktSystems)
-			res := goedx.NewSystem(addr, name, coos...)
+			res := System{
+				System:      *goedx.NewSystem(addr, name, coos...),
+				FirstAccess: now,
+				LastAccess:  now,
+			}
 			var buf bytes.Buffer
 			enc := gob.NewEncoder(&buf)
 			if err = enc.Encode(res); err == nil {
@@ -61,12 +74,16 @@ func (g *Galaxy) EdgxSystem(
 		})
 	} else if !res.Same(name, coos...) {
 		res.Set(name, coos...)
-		g.EdgxUpdate(res)
+		res.LastAccess = now
+		g.UpdateSystem(res)
+	} else if res.LastAccess.Add(5 * time.Minute).Before(now) { // TODO param
+		res.LastAccess = now
+		g.UpdateSystem(res)
 	}
-	return res, nil
+	return &res.System, nil
 }
 
-func (g *Galaxy) EdgxUpdate(sys *goedx.System) {
+func (g *Galaxy) UpdateSystem(sys *System) {
 	db := (*bolt.DB)(g)
 	db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket(bktSystems)
