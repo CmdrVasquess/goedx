@@ -38,6 +38,7 @@ func New(edState *EDState, gxy Galaxy) *Extension {
 }
 
 func (ext *Extension) AddApp(name string, app App) {
+	log.Infoa("add `app`", name)
 	ext.apps = append(ext.apps, app)
 	ext.appNms = append(ext.appNms, name)
 	ext.appToks = append(ext.appToks, nil)
