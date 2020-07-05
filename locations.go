@@ -4,19 +4,24 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"math"
+	"time"
 
 	"git.fractalqb.de/fractalqb/ggja"
-	"github.com/mitchellh/mapstructure"
 )
 
 type Location interface {
 	System() *System
+	ToMap(m *map[string]interface{}, setType bool) error
+	FromMap(m map[string]interface{}) error
 }
 
 type System struct {
-	Addr uint64
-	Name string
-	Coos SysCoos
+	Addr        uint64
+	Name        string
+	Coos        SysCoos
+	FirstAccess time.Time
+	LastAccess  time.Time
 }
 
 func NewSystem(addr uint64, name string, coos ...float32) *System {
@@ -53,6 +58,53 @@ func (s *System) Same(name string, coos ...float32) bool {
 
 func (s *System) System() *System { return s }
 
+func (s *System) ToMap(m *map[string]interface{}, setType bool) error {
+	(*m)["Addr"] = s.Addr
+	(*m)["Name"] = s.Name
+	if s.Coos.Valid() {
+		(*m)["Coos"] = &s.Coos
+	}
+	if !s.FirstAccess.IsZero() {
+		(*m)["FirstAccess"] = s.FirstAccess
+	}
+	if !s.LastAccess.IsZero() {
+		(*m)["LastAccess"] = s.LastAccess
+	}
+	if setType {
+		(*m)[jsonTypeTag] = "system"
+	}
+	return nil
+}
+
+func (s *System) FromMap(m map[string]interface{}) (err error) {
+	obj := ggja.Obj{Bare: m, OnError: func(e error) { err = e }}
+	s.Addr = obj.MUint64("Addr")
+	if err != nil {
+		return err
+	}
+	s.Name = obj.MStr("Name")
+	if err != nil {
+		return err
+	}
+	if coos := obj.Arr("Coos"); coos == nil {
+		nan32 := ChgF32(math.NaN())
+		s.Coos[0] = nan32
+		s.Coos[1] = nan32
+		s.Coos[2] = nan32
+	}
+	if ts := obj.Str("FirstAccess", ""); ts == "" {
+		s.FirstAccess = time.Time{}
+	} else if err := json.Unmarshal([]byte(ts), &s.FirstAccess); err != nil {
+		return err
+	}
+	if ts := obj.Str("LastAccess", ""); ts == "" {
+		s.LastAccess = time.Time{}
+	} else if err := json.Unmarshal([]byte(ts), &s.LastAccess); err != nil {
+		return err
+	}
+	return nil
+}
+
 type Port struct {
 	Sys    *System
 	Name   string
@@ -60,6 +112,39 @@ type Port struct {
 }
 
 func (p *Port) System() *System { return p.Sys }
+
+func (p *Port) ToMap(m *map[string]interface{}, setType bool) error {
+	sys := make(map[string]interface{})
+	if err := p.Sys.ToMap(&sys, false); err != nil {
+		return fmt.Errorf("Port.Sys: %s", err)
+	}
+	(*m)["Sys"] = sys
+	(*m)["Name"] = p.Name
+	(*m)["Docked"] = p.Docked
+	if setType {
+		(*m)[jsonTypeTag] = "port"
+	}
+	return nil
+}
+
+func (p *Port) FromMap(m map[string]interface{}) (err error) {
+	obj := ggja.Obj{Bare: m, OnError: func(e error) { err = e }}
+	sysMap := obj.MObj("Sys")
+	if err != nil {
+		return err
+	}
+	sys := new(System)
+	if err = sys.FromMap(sysMap.Bare); err != nil {
+		return fmt.Errorf("Port.Sys: %s", err)
+	}
+	p.Sys = sys
+	p.Name = obj.MStr("Name")
+	if err != nil {
+		return err
+	}
+	p.Docked = obj.MBool("Docked")
+	return err
+}
 
 type JSONLocation struct {
 	Location
@@ -88,17 +173,9 @@ func (jloc JSONLocation) MarshalJSON() ([]byte, error) {
 		return jsonNull, nil
 	}
 	tmp := make(map[string]interface{})
-	err := mapstructure.Decode(jloc.Location, &tmp)
+	err := jloc.Location.ToMap(&tmp, true)
 	if err != nil {
 		return nil, err
-	}
-	switch jloc.Location.(type) {
-	case *System:
-		tmp[jsonTypeTag] = "system"
-	case *Port:
-		tmp[jsonTypeTag] = "port"
-	default:
-		return nil, fmt.Errorf("unknown location type '%T'", jloc.Location)
 	}
 	return json.Marshal(tmp)
 }
@@ -113,13 +190,13 @@ func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
 	switch obj.Str(jsonTypeTag, "") {
 	case "system":
 		s := new(System)
-		if err := mapstructure.Decode(tmp, s); err != nil {
+		if err := s.FromMap(tmp); err != nil {
 			return err
 		}
 		jloc.Location = s
 	case "port":
 		p := new(Port)
-		if err := mapstructure.Decode(tmp, p); err != nil {
+		if err := p.FromMap(tmp); err != nil {
 			return err
 		}
 		jloc.Location = p

@@ -15,6 +15,7 @@ func ehLocation(ext *Extension, e events.Event) (chg Change) {
 		evt.SystemAddress,
 		evt.StarSystem,
 		evt.StarPos[:],
+		evt.Time,
 	)
 	var loc Location
 	switch {

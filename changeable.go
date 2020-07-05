@@ -73,3 +73,9 @@ func (sc *SysCoos) Set(x, y, z float32, chg Change) (res Change) {
 	res |= sc[2].Set(z, chg)
 	return chg
 }
+
+func (sc *SysCoos) Valid() bool {
+	return !math.IsNaN(float64((*sc)[0])) &&
+		!math.IsNaN(float64((*sc)[1])) &&
+		!math.IsNaN(float64((*sc)[2]))
+}

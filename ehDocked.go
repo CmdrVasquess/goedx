@@ -11,7 +11,7 @@ func init() {
 
 func ehDocked(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Docked)
-	sys, _ := ext.Galaxy.EdgxSystem(evt.SystemAddress, evt.StarSystem, nil)
+	sys, _ := ext.Galaxy.EdgxSystem(evt.SystemAddress, evt.StarSystem, nil, evt.Time)
 	loc := &Port{
 		Sys:    sys,
 		Name:   evt.StationName,

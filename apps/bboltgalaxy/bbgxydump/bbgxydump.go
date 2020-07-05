@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
+	"github.com/CmdrVasquess/goedx"
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -20,7 +20,7 @@ func dumpfile(name string) {
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("systems"))
 		crsr := b.Cursor()
-		var sys bboltgalaxy.System
+		var sys goedx.System
 		for k, v := crsr.First(); k != nil; k, v = crsr.Next() {
 			dec := gob.NewDecoder(bytes.NewReader(v))
 			if err = dec.Decode(&sys); err != nil {

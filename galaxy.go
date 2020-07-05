@@ -1,15 +1,19 @@
 package goedx
 
+import "time"
+
 type Galaxy interface {
-	EdgxSystem(addr uint64, name string, coos []float32) (*System, interface{})
+	EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) (*System, interface{})
 }
 
 const EchoGalaxy = echoGxy(0)
 
 type echoGxy int
 
-func (_ echoGxy) EdgxSystem(addr uint64, name string, coos []float32) (*System, interface{}) {
+func (_ echoGxy) EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) (*System, interface{}) {
 	res := NewSystem(addr, name, coos...)
+	res.FirstAccess = touch
+	res.LastAccess = touch
 	return res, nil
 }
 

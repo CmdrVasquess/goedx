@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+const JumpHitsMax = 100
+
 const (
 	ChgGame Change = (1 << iota)
 	ChgCommander
@@ -55,7 +57,7 @@ type EDState struct {
 		Lang   string
 		Region string
 	}
-	Cmdr      *Commander `json:"-"`
+	Cmdr             *Commander `json:"-"`
 	LastJournalEvent time.Time
 }
 
@@ -138,15 +140,22 @@ func (ed *EDState) Load(file string) error {
 	return LoadJSON(file, ed)
 }
 
+type Jump struct {
+	SysAddr uint64
+	Arrive  time.Time
+}
+
 type Commander struct {
-	FID    string
-	Name   string
-	Ranks  Ranks
-	ShipID int
-	At     JSONLocation
-	Ships  map[int]*Ship
-	Mats   Materials
-	inShip *Ship
+	FID      string
+	Name     string
+	Ranks    Ranks
+	ShipID   int
+	At       JSONLocation
+	Ships    map[int]*Ship
+	Mats     Materials
+	inShip   *Ship
+	JumpHist []Jump
+	LastJump int
 }
 
 func NewCommander(fid string) *Commander {
@@ -196,6 +205,21 @@ func (cmdr *Commander) StoreCurrentShip(shipId int) {
 	cmdr.inShip = nil
 	if port := cmdr.At.Port(); port != nil {
 		ship.Berth = port
+	}
+}
+
+func (cmdr *Commander) Jump(addr uint64, t time.Time) {
+	if len(cmdr.JumpHist) < JumpHitsMax {
+		cmdr.JumpHist = append(cmdr.JumpHist, Jump{addr, t})
+	} else {
+		i := cmdr.LastJump + 1
+		if i >= len(cmdr.JumpHist) {
+			i = 0
+		}
+		j := &cmdr.JumpHist[i]
+		j.SysAddr = addr
+		j.Arrive = t
+		cmdr.LastJump = i
 	}
 }
 

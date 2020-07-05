@@ -12,12 +12,6 @@ import (
 
 type Galaxy bolt.DB
 
-type System struct {
-	goedx.System
-	FirstAccess time.Time
-	LastAccess  time.Time
-}
-
 func Open(file string) (*Galaxy, error) {
 	db, err := bolt.Open(file, 0666, nil)
 	err = db.Update(func(tx *bolt.Tx) error {
@@ -39,8 +33,9 @@ func (g *Galaxy) EdgxSystem(
 	addr uint64,
 	name string,
 	coos []float32,
+	touch time.Time,
 ) (sys *goedx.System, tok interface{}) {
-	var res *System
+	var res *goedx.System
 	db := (*bolt.DB)(g)
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket(bktSystems)
@@ -49,22 +44,19 @@ func (g *Galaxy) EdgxSystem(
 			return nil
 		}
 		dec := gob.NewDecoder(bytes.NewReader(raw))
-		res = new(System)
+		res = new(goedx.System)
 		err := dec.Decode(res)
 		if err != nil {
 			res = nil
 		}
 		return err
 	})
-	now := time.Now()
 	if res == nil {
 		db.Update(func(tx *bolt.Tx) (err error) {
 			b := tx.Bucket(bktSystems)
-			res = &System{
-				System:      *goedx.NewSystem(addr, name, coos...),
-				FirstAccess: now,
-				LastAccess:  now,
-			}
+			res = goedx.NewSystem(addr, name, coos...)
+			res.FirstAccess = touch
+			res.LastAccess = touch
 			var buf bytes.Buffer
 			enc := gob.NewEncoder(&buf)
 			if err = enc.Encode(res); err == nil {
@@ -74,16 +66,18 @@ func (g *Galaxy) EdgxSystem(
 		})
 	} else if !res.Same(name, coos...) {
 		res.Set(name, coos...)
-		res.LastAccess = now
+		if !touch.IsZero() {
+			res.LastAccess = touch
+		}
 		g.UpdateSystem(res)
-	} else if res.LastAccess.Add(5 * time.Minute).Before(now) { // TODO param
-		res.LastAccess = now
+	} else if !touch.IsZero() && res.LastAccess.Add(5*time.Minute).Before(touch) { // TODO param
+		res.LastAccess = touch
 		g.UpdateSystem(res)
 	}
-	return &res.System, nil
+	return res, nil
 }
 
-func (g *Galaxy) UpdateSystem(sys *System) {
+func (g *Galaxy) UpdateSystem(sys *goedx.System) {
 	db := (*bolt.DB)(g)
 	db.Update(func(tx *bolt.Tx) (err error) {
 		b := tx.Bucket(bktSystems)

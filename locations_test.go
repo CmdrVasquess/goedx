@@ -7,6 +7,31 @@ import (
 	"os"
 )
 
+func ExampleSystem() {
+	s := System{
+		Addr: 4711,
+		Name: "Köln",
+		Coos: ToSysCoos(3, 2, 1),
+	}
+	var sb bytes.Buffer
+	enc := json.NewEncoder(&sb)
+	enc.Encode(&s)
+	os.Stdout.Write(sb.Bytes())
+	sb.Reset()
+	enc.Encode(JSONLocation{&s})
+	os.Stdout.Write(sb.Bytes())
+	var jloc JSONLocation
+	fmt.Println(json.Unmarshal(sb.Bytes(), &jloc))
+	sb.Reset()
+	enc.Encode(&s)
+	os.Stdout.Write(sb.Bytes())
+	// Output:
+	// {"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"}
+	// {"@type":"system","Addr":4711,"Coos":[3,2,1],"Name":"Köln"}
+	// <nil>
+	// {"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"}
+}
+
 func ExamplePort() {
 	p := Port{
 		Sys: &System{
@@ -14,7 +39,8 @@ func ExamplePort() {
 			Name: "Köln",
 			Coos: ToSysCoos(3, 2, 1),
 		},
-		Name: "Hafen",
+		Name:   "Hafen",
+		Docked: true,
 	}
 	var sb bytes.Buffer
 	enc := json.NewEncoder(&sb)
@@ -29,8 +55,8 @@ func ExamplePort() {
 	enc.Encode(&p)
 	os.Stdout.Write(sb.Bytes())
 	// Output:
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen","Docked":false}
-	// {"@type":"port","Docked":false,"Name":"Hafen","Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]}}
+	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"},"Name":"Hafen","Docked":true}
+	// {"@type":"port","Docked":true,"Name":"Hafen","Sys":{"Addr":4711,"Coos":[3,2,1],"Name":"Köln"}}
 	// <nil>
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1]},"Name":"Hafen","Docked":false}
+	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"},"Name":"Hafen","Docked":true}
 }
