@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"runtime/debug"
 	"time"
+
+	"git.fractalqb.de/fractalqb/qbsllm"
 
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/watched"
@@ -47,7 +50,7 @@ func (ext *Extension) AddApp(name string, app App) {
 func (ext *Extension) Run(latestJournal bool) (err error) {
 	ext.watch = &watched.JournalDir{
 		Dir:       ext.JournalDir,
-		PerJLine:  ext.jLineHandler,
+		PerJLine:  ext.journalHandler,
 		OnStatChg: ext.statChangeHandler,
 		Quit:      make(chan bool),
 	}
@@ -94,7 +97,7 @@ func (ext *Extension) DiffEvtsHdls() (es []string, hs []string) {
 	return es, hs
 }
 
-func (ext *Extension) jLineHandler(line []byte) {
+func (ext *Extension) journalHandler(line []byte) {
 	t, evtName, err := events.Peek(line)
 	if err != nil {
 		log.Errore(err)
@@ -198,6 +201,9 @@ func (ext *Extension) EventHandler(evtType events.Type, raw []byte) (err error) 
 			}
 			log.Errora("`event type` handler `panic` on `event`",
 				evtType, p, evt)
+			if log.Logs(qbsllm.Ldebug) {
+				log.Debugs(string(debug.Stack()))
+			}
 		}
 	}()
 	for i, app := range ext.apps {

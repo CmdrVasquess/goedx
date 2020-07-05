@@ -49,7 +49,7 @@ func (g *Galaxy) EdgxSystem(
 			return nil
 		}
 		dec := gob.NewDecoder(bytes.NewReader(raw))
-		res := new(System)
+		res = new(System)
 		err := dec.Decode(res)
 		if err != nil {
 			res = nil
@@ -60,7 +60,7 @@ func (g *Galaxy) EdgxSystem(
 	if res == nil {
 		db.Update(func(tx *bolt.Tx) (err error) {
 			b := tx.Bucket(bktSystems)
-			res := System{
+			res = &System{
 				System:      *goedx.NewSystem(addr, name, coos...),
 				FirstAccess: now,
 				LastAccess:  now,

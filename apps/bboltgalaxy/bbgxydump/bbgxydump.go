@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
 	bolt "go.etcd.io/bbolt"
@@ -25,7 +26,11 @@ func dumpfile(name string) {
 			if err = dec.Decode(&sys); err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("%d '%s' %v\n", sys.Addr, sys.Name, sys.Coos)
+			fmt.Printf("%d '%s' %v [%s / %s]\n",
+				sys.Addr, sys.Name, sys.Coos,
+				sys.FirstAccess.Format(time.RFC822),
+				sys.LastAccess.Format(time.RFC822),
+			)
 		}
 		return nil
 	})
