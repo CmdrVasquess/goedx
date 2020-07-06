@@ -11,7 +11,7 @@ func init() {
 
 func ehShipyardSwap(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.ShipyardSwap)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		if cmdr.ShipID != evt.StoreShipID {
 			log.Warna("current `ship` differs from `ship to be stored`",
 				cmdr.ShipID,

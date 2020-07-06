@@ -11,7 +11,7 @@ func init() {
 
 func ehShipyardNew(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.ShipyardNew)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		cmdr.StoreCurrentShip(0)
 		ship := cmdr.GetShip(evt.NewShipID)
 		ship.Type = evt.ShipType

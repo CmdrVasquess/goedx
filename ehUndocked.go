@@ -11,7 +11,7 @@ func init() {
 
 func ehUndocked(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Undocked)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		if port := cmdr.At.Port(); port == nil {
 			port := &Port{
 				Name:   evt.StationName,

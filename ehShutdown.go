@@ -10,8 +10,15 @@ func init() {
 }
 
 func ehShutdown(ext *Extension, e events.Event) (chg Change) {
-	Must(ext.EdState.Write(func() error {
-		ext.SwitchCommander("", "")
+	Must(ext.EDState.Write(func() error {
+		if ext.ShutdownLogsOut {
+			ext.SwitchCommander("", "")
+		} else if ext.EDState.Cmdr != nil && ext.CmdrFile != nil {
+			cmdrFile := ext.CmdrFile(ext.EDState.Cmdr)
+			if err := ext.EDState.Cmdr.Save(cmdrFile); err != nil {
+				return err
+			}
+		}
 		return nil
 	}))
 	return 0

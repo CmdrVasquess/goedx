@@ -28,7 +28,7 @@ func ehLocation(ext *Extension, e events.Event) (chg Change) {
 	default:
 		loc = sys
 	}
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		cmdr.At.Location = loc
 		chg = ChgLocation
 		return nil

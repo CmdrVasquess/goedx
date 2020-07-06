@@ -24,7 +24,7 @@ func ehMaterials(ext *Extension, e events.Event) (chg Change) {
 		return res
 	}
 	evt := e.(*journal.Materials)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		cmdr.Mats.Raw = cpMats(cmdr.Mats.Raw, evt.Raw)
 		cmdr.Mats.Man = cpMats(cmdr.Mats.Man, evt.Manufactured)
 		cmdr.Mats.Enc = cpMats(cmdr.Mats.Enc, evt.Encoded)

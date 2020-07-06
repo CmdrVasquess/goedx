@@ -21,23 +21,26 @@ func Must(err error) {
 	}
 }
 
+type ShutdownMode int
+
 type Extension struct {
-	JournalDir   string
-	JournalAfter time.Time
-	EdState      *EDState
-	Galaxy       Galaxy
-	CmdrFile     func(*Commander) string
-	watch        *watched.JournalDir
-	apps         []App
-	appNms       []string
-	appToks      []interface{}
+	JournalDir      string
+	JournalAfter    time.Time
+	EDState         *EDState
+	Galaxy          Galaxy
+	CmdrFile        func(*Commander) string
+	ShutdownLogsOut bool
+	watch           *watched.JournalDir
+	apps            []App
+	appNms          []string
+	appToks         []interface{}
 }
 
 func New(edState *EDState, gxy Galaxy) *Extension {
 	if gxy == nil {
 		gxy = EchoGalaxy
 	}
-	return &Extension{EdState: edState, Galaxy: gxy}
+	return &Extension{EDState: edState, Galaxy: gxy}
 }
 
 func (ext *Extension) AddApp(name string, app App) {
@@ -108,7 +111,7 @@ func (ext *Extension) journalHandler(line []byte) {
 		log.Tracea("`event` `at` outdated", evtName, t)
 		return
 	}
-	ext.EdState.LastJournalEvent = t
+	ext.EDState.LastJournalEvent = t
 	evtType := events.EventType(evtName)
 	if evtType == nil {
 		log.Debuga("unknown `event type`", evtName)
@@ -118,7 +121,7 @@ func (ext *Extension) journalHandler(line []byte) {
 }
 
 func (ext *Extension) SwitchCommander(fid, name string) *Commander {
-	cmdr := ext.EdState.Cmdr
+	cmdr := ext.EDState.Cmdr
 	if cmdr != nil && cmdr.FID != "" {
 		if ext.CmdrFile != nil {
 			f := ext.CmdrFile(cmdr)
@@ -127,7 +130,7 @@ func (ext *Extension) SwitchCommander(fid, name string) *Commander {
 			}
 		}
 	}
-	ext.EdState.Cmdr = nil
+	ext.EDState.Cmdr = nil
 	if fid == "" {
 		return nil
 	}
@@ -142,7 +145,7 @@ func (ext *Extension) SwitchCommander(fid, name string) *Commander {
 	if name != "" {
 		cmdr.Name = name
 	}
-	ext.EdState.Cmdr = cmdr
+	ext.EDState.Cmdr = cmdr
 	return cmdr
 }
 

@@ -11,7 +11,7 @@ func init() {
 
 func ehSellShipOnRebuy(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.SellShipOnRebuy)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		sellShip(cmdr, evt.Time, evt.SellShipID)
 		return nil
 	}))

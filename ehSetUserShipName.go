@@ -11,7 +11,7 @@ func init() {
 
 func ehSetUserShipName(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.SetUserShipName)
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		ship := cmdr.GetShip(evt.ShipID)
 		ship.Ident = evt.UserShipId
 		ship.Name = evt.UserShipName

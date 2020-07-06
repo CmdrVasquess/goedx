@@ -75,7 +75,7 @@ func main() {
 	}
 	state.Load("goedx-state.json")
 	defer func() {
-		if cmdr := ext.EdState.Cmdr; cmdr != nil && cmdr.FID != "" {
+		if cmdr := ext.EDState.Cmdr; cmdr != nil && cmdr.FID != "" {
 			f := ext.CmdrFile(cmdr)
 			if err := cmdr.Save(f); err != nil {
 				log.Println(err)

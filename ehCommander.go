@@ -11,7 +11,7 @@ func init() {
 
 func ehCommander(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Commander)
-	Must(ext.EdState.Write(func() error {
+	Must(ext.EDState.Write(func() error {
 		ext.SwitchCommander(evt.FID, evt.Name)
 		return nil
 	}))

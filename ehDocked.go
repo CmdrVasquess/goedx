@@ -17,7 +17,7 @@ func ehDocked(ext *Extension, e events.Event) (chg Change) {
 		Name:   evt.StationName,
 		Docked: true,
 	}
-	Must(ext.EdState.WriteCmdr(func(cmdr *Commander) error {
+	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
 		cmdr.At.Location = loc
 		chg = ChgLocation
 		return nil
