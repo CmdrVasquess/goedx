@@ -25,7 +25,11 @@ func (ac *AppChannel) Close() {
 	close(ac.c)
 }
 
-func (ac *AppChannel) Finish(token interface{}, e events.Event, chg Change) {
+func (ac *AppChannel) PrepareEDEvent(e events.Event) (token interface{}) {
+	return ac.app.PrepareEDEvent(e)
+}
+
+func (ac *AppChannel) FinishEDEvent(token interface{}, e events.Event, chg Change) {
 	ac.c <- finish{token, e, chg}
 }
 
