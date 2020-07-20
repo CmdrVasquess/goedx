@@ -114,7 +114,7 @@ func (ext *Extension) journalHandler(line []byte) {
 	ext.EDState.LastJournalEvent = t
 	evtType := events.EventType(evtName)
 	if evtType == nil {
-		log.Debuga("unknown `event type`", evtName)
+		log.Tracea("unknown `event type`", evtName)
 		return
 	}
 	ext.EventHandler(evtType, line)
@@ -152,7 +152,7 @@ func (ext *Extension) SwitchCommander(fid, name string) *Commander {
 func (etx *Extension) statChangeHandler(evtName string, file string) {
 	evtType := events.EventType(evtName)
 	if evtType == nil {
-		log.Debuga("unknown `event type`", evtName)
+		log.Tracea("unknown `event type`", evtName)
 		return
 	}
 	line, err := ioutil.ReadFile(file)
@@ -230,7 +230,13 @@ func (ext *Extension) prepareApp(app App, nm string, e events.Event) interface{}
 	return app.PrepareEDEvent(e)
 }
 
-func (ext *Extension) finishApp(app App, nm string, tok interface{}, e events.Event, chg Change) {
+func (ext *Extension) finishApp(
+	app App,
+	nm string,
+	tok interface{},
+	e events.Event,
+	chg Change,
+) {
 	defer func() {
 		if p := recover(); p != nil {
 			log.Errorf("app '%s' panic in finish: %s", nm, p)

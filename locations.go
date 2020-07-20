@@ -188,6 +188,10 @@ func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
 	if err != nil {
 		return err
 	}
+	if len(tmp) == 0 {
+		jloc.Location = nil
+		return nil
+	}
 	obj := ggja.Obj{Bare: tmp, OnError: func(e error) { err = e }}
 	switch obj.Str(jsonTypeTag, "") {
 	case "system":

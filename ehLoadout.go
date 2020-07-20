@@ -12,10 +12,18 @@ func init() {
 func ehLoadout(ext *Extension, e events.Event) (chg Change) {
 	evt := e.(*journal.Loadout)
 	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
-		ship := cmdr.SetShip(evt.ShipID)
+		ship, switched := cmdr.SetShip(evt.ShipID)
+		if switched {
+			chg |= ChgShip
+		}
 		ship.Type = evt.Ship
-		ship.Ident = evt.ShipIdent
-		ship.Name = evt.ShipName
+		chg |= ship.Cargo.Set(evt.CargoCapacity, ChgShip)
+		chg |= ship.Ident.Set(evt.ShipIdent, ChgShip)
+		chg |= ship.Name.Set(evt.ShipName, ChgShip)
+		chg |= ship.MaxRange.Set(evt.MaxJumpRange, ChgShip)
+		if ship.MaxRange < ship.MaxJump {
+			chg |= ship.MaxJump.Set(0, ChgShip)
+		}
 		return nil
 	}))
 	return chg

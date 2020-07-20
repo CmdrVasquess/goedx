@@ -15,9 +15,11 @@ const JumpHitsMax = 100
 const (
 	ChgGame Change = (1 << iota)
 	ChgCommander
-	ChgLocation
 
-	ChgTopNum = 3
+	ChgLocation
+	ChgSystem
+
+	ChgShip
 )
 
 func SaveJSON(file string, data interface{}) error {
@@ -145,23 +147,31 @@ type Jump struct {
 	Arrive  time.Time
 }
 
+type RawMatStats struct {
+	Min, Max float32
+	Sum      float64
+	Count    int
+}
+
 type Commander struct {
-	FID      string
-	Name     string
-	Ranks    Ranks
-	ShipID   int
-	At       JSONLocation
-	Ships    map[int]*Ship
-	Mats     Materials
-	inShip   *Ship
-	JumpHist []Jump
-	LastJump int
+	FID         string
+	Name        string
+	Ranks       Ranks
+	ShipID      int
+	At          JSONLocation
+	Ships       map[int]*Ship
+	Mats        Materials
+	inShip      *Ship
+	JumpHist    []Jump
+	LastJump    int
+	RawMatStats map[string]*RawMatStats
 }
 
 func NewCommander(fid string) *Commander {
 	return &Commander{
-		FID:   fid,
-		Ships: make(map[int]*Ship),
+		FID:         fid,
+		Ships:       make(map[int]*Ship),
+		RawMatStats: make(map[string]*RawMatStats),
 	}
 }
 
@@ -181,17 +191,19 @@ func (cmdr *Commander) GetShip(id int) *Ship {
 	return res
 }
 
-func (cmdr *Commander) SetShip(id int) *Ship {
+func (cmdr *Commander) SetShip(id int) (res *Ship, chg bool) {
 	if id < 0 {
+		chg = cmdr.ShipID >= 0
 		cmdr.inShip = nil
 		cmdr.ShipID = -1
-		return nil
+		return nil, chg
 	}
-	res := cmdr.GetShip(id)
+	chg = cmdr.ShipID != id
+	res = cmdr.GetShip(id)
 	cmdr.ShipID = id
 	cmdr.inShip = res
 	res.Berth = nil
-	return res
+	return res, chg
 }
 
 // shipId == 0 => caller has no idea of id
@@ -210,6 +222,7 @@ func (cmdr *Commander) StoreCurrentShip(shipId int) {
 
 func (cmdr *Commander) Jump(addr uint64, t time.Time) {
 	if len(cmdr.JumpHist) < JumpHitsMax {
+		cmdr.LastJump = len(cmdr.JumpHist)
 		cmdr.JumpHist = append(cmdr.JumpHist, Jump{addr, t})
 	} else {
 		i := cmdr.LastJump + 1
@@ -264,11 +277,14 @@ const (
 type Ranks [RanksNum]Rank
 
 type Ship struct {
-	Type  string
-	Ident string
-	Name  string
-	Berth *Port      `json:",omitempty"`
-	Sold  *time.Time `json:",omitempty"`
+	Type     string
+	Ident    ChgString
+	Name     ChgString
+	Cargo    ChgInt
+	MaxRange ChgF32
+	MaxJump  ChgF32
+	Berth    *Port      `json:",omitempty"`
+	Sold     *time.Time `json:",omitempty"`
 }
 
 type Materials struct {

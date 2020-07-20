@@ -3,6 +3,7 @@ package goedx
 import "time"
 
 type Galaxy interface {
+	// Extended galaxy implementations may return extended system info in the interface{}
 	EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) (*System, interface{})
 }
 

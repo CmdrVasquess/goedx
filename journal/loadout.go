@@ -11,10 +11,12 @@ func (t loadoutT) String() string    { return string(t) }
 
 type Loadout struct {
 	events.Common
-	Ship      string
-	ShipID    int
-	ShipName  string
-	ShipIdent string
+	Ship          string
+	ShipID        int
+	ShipName      string
+	ShipIdent     string
+	MaxJumpRange  float32
+	CargoCapacity int
 }
 
 func init() {

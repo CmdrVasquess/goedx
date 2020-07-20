@@ -8,11 +8,25 @@ import (
 
 type Change uint64
 
+func (chg Change) Any(c Change) bool       { return (chg & c) != 0 }
+func (chg Change) All(c Change) bool       { return (chg & c) == c }
+func (chg Change) Without(c Change) Change { return chg &^ c }
+
 type ChgString string
 
 func (s *ChgString) Set(v string, chg Change) Change {
 	if string(*s) != v {
 		*s = ChgString(v)
+		return chg
+	}
+	return 0
+}
+
+type ChgInt int
+
+func (i *ChgInt) Set(v int, chg Change) Change {
+	if int(*i) != v {
+		*i = ChgInt(v)
 		return chg
 	}
 	return 0

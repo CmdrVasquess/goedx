@@ -14,6 +14,7 @@ type FSDJump struct {
 	SystemAddress          uint64
 	StarSystem             string
 	StarPos                [3]float32
+	JumpDist               float32
 	Population             int64
 	Body                   string
 	BodyID                 int
