@@ -6,18 +6,21 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
 	"os"
 
-	"github.com/CmdrVasquess/goedx/apps/l10n"
+	"git.fractalqb.de/fractalqb/c4hgol"
 
-	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
-
+	"git.fractalqb.de/fractalqb/qbsllm"
 	"github.com/CmdrVasquess/goedx"
+	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
+	"github.com/CmdrVasquess/goedx/apps/l10n"
 	"github.com/CmdrVasquess/goedx/events"
 )
 
 var (
+	log    = qbsllm.New(qbsllm.Linfo, "feed", nil, nil)
+	logCgf = c4hgol.Config(qbsllm.NewConfig(log), goedx.LogCfg)
+
 	state = goedx.NewEDState()
 	ext   = goedx.New(state, goedx.EchoGalaxy)
 )
@@ -32,11 +35,11 @@ func feed(rd io.Reader) {
 		}
 		_, evt, err := events.Peek(line)
 		if err != nil {
-			log.Print(err)
+			log.Errore(err)
 			log.Fatalf("[%s]", string(line))
 		} else if et := events.EventType(evt); et != nil {
 			if err = ext.EventHandler(et, line); err != nil {
-				log.Fatal(err)
+				log.Fatale(err)
 			}
 		}
 	}
@@ -49,7 +52,7 @@ func feedFile(name string) {
 }
 
 func main() {
-	log.SetFlags(log.Lshortfile)
+	c4hgol.ShowSource(logCgf, true, false)
 	gxyFile := flag.String("galaxy", "", "set galaxy database file")
 	l10nDir := flag.String("l10n", "", "load/save l10ns to dir")
 	flag.Parse()
@@ -67,8 +70,8 @@ func main() {
 	}
 	{
 		e, h := ext.DiffEvtsHdls()
-		log.Println("events w/o handler:", e)
-		log.Println("handlers w/o event:", h)
+		log.Infof("events w/o handler: %s", e)
+		log.Infof("handlers w/o event: %s", h)
 	}
 	ext.CmdrFile = func(cmdr *goedx.Commander) string {
 		return fmt.Sprintf("./%s.json", cmdr.FID)
@@ -78,7 +81,7 @@ func main() {
 		if cmdr := ext.EDState.Cmdr; cmdr != nil && cmdr.FID != "" {
 			f := ext.CmdrFile(cmdr)
 			if err := cmdr.Save(f); err != nil {
-				log.Println(err)
+				log.Errore(err)
 			}
 		}
 		state.Save("goedx-state.json", "")

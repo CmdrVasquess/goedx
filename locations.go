@@ -96,13 +96,23 @@ func (s *System) FromMap(m map[string]interface{}) (err error) {
 	}
 	if ts := obj.Str("FirstAccess", ""); ts == "" {
 		s.FirstAccess = time.Time{}
-	} else if err := json.Unmarshal([]byte(ts), &s.FirstAccess); err != nil {
-		return err
+	} else {
+		data := []byte{'"'}
+		data = append(data, []byte(ts)...)
+		data = append(data, '"')
+		if err := json.Unmarshal(data, &s.FirstAccess); err != nil {
+			return err
+		}
 	}
 	if ts := obj.Str("LastAccess", ""); ts == "" {
 		s.LastAccess = time.Time{}
-	} else if err := json.Unmarshal([]byte(ts), &s.LastAccess); err != nil {
-		return err
+	} else {
+		data := []byte{'"'}
+		data = append(data, []byte(ts)...)
+		data = append(data, '"')
+		if err := json.Unmarshal(data, &s.LastAccess); err != nil {
+			return err
+		}
 	}
 	return nil
 }
