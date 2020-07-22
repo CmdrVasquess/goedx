@@ -2,6 +2,7 @@ package l10n
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -32,12 +33,12 @@ type Locales struct {
 
 func New(dir string, edState *goedx.EDState) *Locales {
 	res := &Locales{BaseDir: dir, edState: edState}
-	res.clear()
+	res.clearMaps()
 	return res
 }
 
 func (loc *Locales) Close() {
-	loc.save(loc.currentLang)
+	loc.save()
 }
 
 func (loc *Locales) ShipType(key string) (string, bool) {
@@ -72,21 +73,29 @@ func (loc *Locales) local(m map[string]string, key string) (string, bool) {
 	return res, true
 }
 
-func getLang(edState *goedx.EDState) string {
+func getLang(edlang string) string {
+	lang, region := goedx.ParseEDLang(edlang)
 	switch {
-	case edState.L10n.Lang == "":
+	case lang == "":
 		return ""
-	case edState.L10n.Region == "":
-		return edState.L10n.Lang
+	case region == "":
+		return lang
 	}
-	return edState.L10n.Lang + "-" + edState.L10n.Region
+	return fmt.Sprintf("%s-%s", lang, region)
 }
 
 func (loc *Locales) PrepareEDEvent(e events.Event) interface{} {
-	switch e.(type) {
+	switch evt := e.(type) {
 	case *journal.Fileheader:
-		return getLang(loc.edState)
+		lang := getLang(evt.Language)
+		if lang == "" {
+			return nil
+		}
+		return lang
 	case *journal.Materials, *journal.FSDJump, *journal.ShipTargeted:
+		if loc.edState.L10n.Lang == "" {
+			return nil
+		}
 		return true
 	}
 	return nil
@@ -99,8 +108,8 @@ func (loc *Locales) FinishEDEvent(token interface{}, e events.Event, chg goedx.C
 	case *journal.FSDJump:
 		loc.finishFSDJump(evt, chg)
 	case *journal.Fileheader:
-		loc.save(token.(string))
-		loc.load()
+		loc.save()
+		loc.load(token.(string))
 	case *journal.Materials:
 		loc.finishMaterials(evt, chg)
 	default:
@@ -117,11 +126,11 @@ const (
 	mapMatNamesEnc = "matnames-enc"
 )
 
-func (loc *Locales) save(lang string) {
-	if lang == "" {
+func (loc *Locales) save() {
+	if loc.currentLang == "" {
 		return
 	}
-	log.Debuga("saving current `lang` to `dir`", lang, loc.BaseDir)
+	log.Debuga("saving current `lang` to `dir`", loc.currentLang, loc.BaseDir)
 	loc.saveMap(mapShiptype, loc.shiptype)
 	loc.saveMap(mapEconomy, loc.economy)
 	loc.saveMap(mapSecurity, loc.security)
@@ -152,7 +161,7 @@ func (loc *Locales) saveMap(name string, m map[string]string) {
 	}
 }
 
-func (loc *Locales) clear() {
+func (loc *Locales) clearMaps() {
 	log.Debugs("clearing maps")
 	loc.shiptype = make(map[string]string)
 	loc.economy = make(map[string]string)
@@ -162,10 +171,10 @@ func (loc *Locales) clear() {
 	loc.matEncNames = make(map[string]string)
 }
 
-func (loc *Locales) load() {
-	lang := getLang(loc.edState)
+func (loc *Locales) load(lang string) {
 	if lang == "" {
-		loc.clear()
+		loc.clearMaps()
+		loc.currentLang = ""
 		return
 	}
 	log.Debuga("load `lang` from `dir`", lang, loc.BaseDir)

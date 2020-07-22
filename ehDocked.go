@@ -15,6 +15,7 @@ func ehDocked(ext *Extension, e events.Event) (chg Change) {
 	loc := &Port{
 		Sys:    sys,
 		Name:   evt.StationName,
+		Type:   evt.StationType,
 		Docked: true,
 	}
 	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {

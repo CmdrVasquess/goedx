@@ -10,6 +10,11 @@ import (
 	"git.fractalqb.de/fractalqb/ggja"
 )
 
+const (
+	LocTypeSystem = "system"
+	LocTypePort   = "port"
+)
+
 type Location interface {
 	System() *System
 	ToMap(m *map[string]interface{}, setType bool) error
@@ -73,7 +78,7 @@ func (s *System) ToMap(m *map[string]interface{}, setType bool) error {
 		(*m)["LastAccess"] = s.LastAccess
 	}
 	if setType {
-		(*m)[jsonTypeTag] = "system"
+		(*m)[jsonTypeTag] = LocTypeSystem
 	}
 	return nil
 }
@@ -120,6 +125,7 @@ func (s *System) FromMap(m map[string]interface{}) (err error) {
 type Port struct {
 	Sys    *System
 	Name   string
+	Type   string
 	Docked bool
 }
 
@@ -134,7 +140,7 @@ func (p *Port) ToMap(m *map[string]interface{}, setType bool) error {
 	(*m)["Name"] = p.Name
 	(*m)["Docked"] = p.Docked
 	if setType {
-		(*m)[jsonTypeTag] = "port"
+		(*m)[jsonTypeTag] = LocTypePort
 	}
 	return nil
 }
@@ -204,13 +210,13 @@ func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
 	}
 	obj := ggja.Obj{Bare: tmp, OnError: func(e error) { err = e }}
 	switch obj.Str(jsonTypeTag, "") {
-	case "system":
+	case LocTypeSystem:
 		s := new(System)
 		if err := s.FromMap(tmp); err != nil {
 			return err
 		}
 		jloc.Location = s
-	case "port":
+	case LocTypePort:
 		p := new(Port)
 		if err := p.FromMap(tmp); err != nil {
 			return err

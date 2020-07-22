@@ -81,21 +81,26 @@ func (es *EDState) SetEDVersion(v string) {
 var langMap = map[string]string{
 	"English": "en",
 	"German":  "de",
+	"French":  "fr",
+}
+
+func ParseEDLang(edlang string) (lang, region string) {
+	split := strings.Split(edlang, "\\")
+	if len(split) != 2 {
+		log.Errora("cannot parse `language`", edlang)
+		return "", ""
+	}
+	lang = langMap[split[0]]
+	if lang == "" {
+		log.Warna("unknown `language`", split[0])
+		return "", ""
+	}
+	return lang, split[1]
 }
 
 func (es *EDState) SetLanguage(lang string) {
 	es.Language = lang
-	split := strings.Split(lang, "\\")
-	if len(split) != 2 {
-		log.Errora("cannot partse `language`", lang)
-		es.L10n.Lang = ""
-		es.L10n.Region = ""
-	}
-	es.L10n.Lang = langMap[split[0]]
-	if es.L10n.Lang == "" {
-		log.Warna("unknown `language`", split[0])
-	}
-	es.L10n.Region = split[1]
+	es.L10n.Lang, es.L10n.Region = ParseEDLang(lang)
 }
 
 func (es *EDState) MustCommander() *Commander {
