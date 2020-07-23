@@ -15,6 +15,7 @@ func ehUndocked(ext *Extension, e events.Event) (chg Change) {
 		if port := cmdr.At.Port(); port == nil {
 			port := &Port{
 				Name:   evt.StationName,
+				Type:   evt.StationType,
 				Docked: false,
 			}
 			cmdr.At.Location = port
@@ -22,6 +23,7 @@ func ehUndocked(ext *Extension, e events.Event) (chg Change) {
 			port.Docked = false
 			if port.Name != evt.StationName {
 				port.Name = evt.StationName
+				port.Type = evt.StationType
 				port.Sys = nil
 			}
 		}

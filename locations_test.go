@@ -15,6 +15,7 @@ func ExampleSystem() {
 	}
 	var sb bytes.Buffer
 	enc := json.NewEncoder(&sb)
+	enc.SetIndent("", "  ")
 	enc.Encode(&s)
 	os.Stdout.Write(sb.Bytes())
 	sb.Reset()
@@ -26,10 +27,39 @@ func ExampleSystem() {
 	enc.Encode(&s)
 	os.Stdout.Write(sb.Bytes())
 	// Output:
-	// {"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"}
-	// {"@type":"system","Addr":4711,"Coos":[3,2,1],"Name":"Köln"}
+	// {
+	//   "Addr": 4711,
+	//   "Name": "Köln",
+	//   "Coos": [
+	//     3,
+	//     2,
+	//     1
+	//   ],
+	//   "FirstAccess": "0001-01-01T00:00:00Z",
+	//   "LastAccess": "0001-01-01T00:00:00Z"
+	// }
+	// {
+	//   "@type": "system",
+	//   "Addr": 4711,
+	//   "Coos": [
+	//     3,
+	//     2,
+	//     1
+	//   ],
+	//   "Name": "Köln"
+	// }
 	// <nil>
-	// {"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"}
+	// {
+	//   "Addr": 4711,
+	//   "Name": "Köln",
+	//   "Coos": [
+	//     3,
+	//     2,
+	//     1
+	//   ],
+	//   "FirstAccess": "0001-01-01T00:00:00Z",
+	//   "LastAccess": "0001-01-01T00:00:00Z"
+	// }
 }
 
 func ExamplePort() {
@@ -40,10 +70,12 @@ func ExamplePort() {
 			Coos: ToSysCoos(3, 2, 1),
 		},
 		Name:   "Hafen",
+		Type:   "Orbis",
 		Docked: true,
 	}
 	var sb bytes.Buffer
 	enc := json.NewEncoder(&sb)
+	enc.SetIndent("", "  ")
 	enc.Encode(&p)
 	os.Stdout.Write(sb.Bytes())
 	sb.Reset()
@@ -55,8 +87,51 @@ func ExamplePort() {
 	enc.Encode(&p)
 	os.Stdout.Write(sb.Bytes())
 	// Output:
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"},"Name":"Hafen","Docked":true}
-	// {"@type":"port","Docked":true,"Name":"Hafen","Sys":{"Addr":4711,"Coos":[3,2,1],"Name":"Köln"}}
+	// {
+	//   "Sys": {
+	//     "Addr": 4711,
+	//     "Name": "Köln",
+	//     "Coos": [
+	//       3,
+	//       2,
+	//       1
+	//     ],
+	//     "FirstAccess": "0001-01-01T00:00:00Z",
+	//     "LastAccess": "0001-01-01T00:00:00Z"
+	//   },
+	//   "Name": "Hafen",
+	//   "Type": "Orbis",
+	//   "Docked": true
+	// }
+	// {
+	//   "@type": "port",
+	//   "Docked": true,
+	//   "Name": "Hafen",
+	//   "Sys": {
+	//     "Addr": 4711,
+	//     "Coos": [
+	//       3,
+	//       2,
+	//       1
+	//     ],
+	//     "Name": "Köln"
+	//   }
+	// }
 	// <nil>
-	// {"Sys":{"Addr":4711,"Name":"Köln","Coos":[3,2,1],"FirstAccess":"0001-01-01T00:00:00Z","LastAccess":"0001-01-01T00:00:00Z"},"Name":"Hafen","Docked":true}
+	// {
+	//   "Sys": {
+	//     "Addr": 4711,
+	//     "Name": "Köln",
+	//     "Coos": [
+	//       3,
+	//       2,
+	//       1
+	//     ],
+	//     "FirstAccess": "0001-01-01T00:00:00Z",
+	//     "LastAccess": "0001-01-01T00:00:00Z"
+	//   },
+	//   "Name": "Hafen",
+	//   "Type": "Orbis",
+	//   "Docked": true
+	// }
 }

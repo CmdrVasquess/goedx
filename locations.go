@@ -11,8 +11,12 @@ import (
 )
 
 const (
-	LocTypeSystem = "system"
-	LocTypePort   = "port"
+	LocTypeSystem  = "system"
+	LocTypePort    = "port"
+	LocTypeFSDJump = "jump"
+
+	jsonTypeTag = "@type"
+	jsonSysTag  = "Sys"
 )
 
 type Location interface {
@@ -125,7 +129,7 @@ func (s *System) FromMap(m map[string]interface{}) (err error) {
 type Port struct {
 	Sys    *System
 	Name   string
-	Type   string
+	Type   string `json:",omitempty"`
 	Docked bool
 }
 
@@ -136,8 +140,11 @@ func (p *Port) ToMap(m *map[string]interface{}, setType bool) error {
 	if err := p.Sys.ToMap(&sys, false); err != nil {
 		return fmt.Errorf("Port.Sys: %s", err)
 	}
-	(*m)["Sys"] = sys
+	(*m)[jsonSysTag] = sys
 	(*m)["Name"] = p.Name
+	if p.Type != "" {
+		(*m)["Type"] = p.Type
+	}
 	(*m)["Docked"] = p.Docked
 	if setType {
 		(*m)[jsonTypeTag] = LocTypePort
@@ -147,7 +154,7 @@ func (p *Port) ToMap(m *map[string]interface{}, setType bool) error {
 
 func (p *Port) FromMap(m map[string]interface{}) (err error) {
 	obj := ggja.Obj{Bare: m, OnError: func(e error) { err = e }}
-	sysMap := obj.MObj("Sys")
+	sysMap := obj.MObj(jsonSysTag)
 	if err != nil {
 		return err
 	}
@@ -160,8 +167,59 @@ func (p *Port) FromMap(m map[string]interface{}) (err error) {
 	if err != nil {
 		return err
 	}
+	p.Type = obj.Str("Type", "")
+	if err != nil {
+		return err
+	}
 	p.Docked = obj.MBool("Docked")
 	return err
+}
+
+type FSDJump struct {
+	Sys *System
+	To  *System
+}
+
+func (j *FSDJump) System() *System { return j.Sys }
+
+func (j *FSDJump) ToMap(m *map[string]interface{}, setType bool) error {
+	sys := make(map[string]interface{})
+	if err := j.Sys.ToMap(&sys, false); err != nil {
+		return err
+	}
+	to := make(map[string]interface{})
+	if err := j.To.ToMap(&to, false); err != nil {
+		return err
+	}
+	(*m)[jsonSysTag] = sys
+	(*m)["To"] = to
+	if setType {
+		(*m)[jsonTypeTag] = LocTypeFSDJump
+	}
+	return nil
+}
+
+func (j *FSDJump) FromMap(m map[string]interface{}) (err error) {
+	obj := ggja.Obj{Bare: m, OnError: func(e error) { err = e }}
+	sysMap := obj.MObj(jsonSysTag)
+	if err != nil {
+		return err
+	}
+	sys := new(System)
+	if err = sys.FromMap(sysMap.Bare); err != nil {
+		return err
+	}
+	j.Sys = sys
+	sysMap = obj.MObj("To")
+	if err != nil {
+		return err
+	}
+	sys = new(System)
+	if err = sys.FromMap(sysMap.Bare); err != nil {
+		return err
+	}
+	j.To = sys
+	return nil
 }
 
 type JSONLocation struct {
@@ -175,14 +233,19 @@ func (jl JSONLocation) System() *System {
 	return jl.Location.System()
 }
 
+func (jl JSONLocation) FSDJump() *FSDJump {
+	if j, ok := jl.Location.(*FSDJump); ok {
+		return j
+	}
+	return nil
+}
+
 func (jl JSONLocation) Port() *Port {
 	if p, ok := jl.Location.(*Port); ok {
 		return p
 	}
 	return nil
 }
-
-const jsonTypeTag = "@type"
 
 var jsonNull = []byte("null")
 
@@ -222,6 +285,12 @@ func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
 			return err
 		}
 		jloc.Location = p
+	case LocTypeFSDJump:
+		j := new(FSDJump)
+		if err := j.FromMap(tmp); err != nil {
+			return err
+		}
+		jloc.Location = j
 	case "":
 		err = errors.New("missing @type attribute")
 	default:

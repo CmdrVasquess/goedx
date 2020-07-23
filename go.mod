@@ -10,4 +10,5 @@ require (
 	git.fractalqb.de/fractalqb/sllm v0.11.1 // indirect
 	github.com/CmdrVasquess/watched v0.5.3
 	go.etcd.io/bbolt v1.3.5
+	golang.org/x/sys v0.0.0-20200720211630-cb9d2d5c5666 // indirect
 )

@@ -46,7 +46,7 @@ func (f ChgF32) MarshalJSON() ([]byte, error) {
 	x := float64(f)
 	switch {
 	case math.IsNaN(x):
-		return json.Marshal("-")
+		return json.Marshal("NaN")
 	case math.IsInf(x, 1):
 		return json.Marshal("+∞")
 	case math.IsInf(x, -1):
@@ -59,7 +59,7 @@ func (f ChgF32) MarshalJSON() ([]byte, error) {
 func (f *ChgF32) UnmarshalJSON(data []byte) error {
 	str := string(data)
 	switch str {
-	case `"-"`:
+	case `"NaN"`:
 		*f = ChgF32(math.NaN())
 	case `"+∞"`:
 		*f = ChgF32(math.Inf(1))
@@ -71,6 +71,49 @@ func (f *ChgF32) UnmarshalJSON(data []byte) error {
 			return err
 		}
 		*f = ChgF32(x)
+	}
+	return nil
+}
+
+type ChgF64 float64
+
+func (f *ChgF64) Set(v float64, chg Change) Change {
+	if float64(*f) != v {
+		*f = ChgF64(v)
+		return chg
+	}
+	return 0
+}
+
+func (f ChgF64) MarshalJSON() ([]byte, error) {
+	x := float64(f)
+	switch {
+	case math.IsNaN(x):
+		return json.Marshal("Nan")
+	case math.IsInf(x, 1):
+		return json.Marshal("+∞")
+	case math.IsInf(x, -1):
+		return json.Marshal("-∞")
+	default:
+		return strconv.AppendFloat(nil, x, 'f', -1, 64), nil
+	}
+}
+
+func (f *ChgF64) UnmarshalJSON(data []byte) error {
+	str := string(data)
+	switch str {
+	case `"NaN"`:
+		*f = ChgF64(math.NaN())
+	case `"+∞"`:
+		*f = ChgF64(math.Inf(1))
+	case `"-∞"`:
+		*f = ChgF64(math.Inf(-1))
+	default:
+		x, err := strconv.ParseFloat(str, 64)
+		if err != nil {
+			return err
+		}
+		*f = ChgF64(x)
 	}
 	return nil
 }
