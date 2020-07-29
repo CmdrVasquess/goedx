@@ -22,7 +22,13 @@ const (
 	ChgShip
 )
 
-func SaveJSON(file string, data interface{}) error {
+func SaveJSON(file string, data interface{}, logTmpl string) error {
+	if !strings.HasSuffix(file, ".json") {
+		file = file + ".json"
+	}
+	if logTmpl != "" {
+		log.Infoa(logTmpl, file)
+	}
 	tmp := file + "~"
 	wr, err := os.Create(tmp)
 	if err != nil {
@@ -38,9 +44,19 @@ func SaveJSON(file string, data interface{}) error {
 	return os.Rename(tmp, file)
 }
 
-func LoadJSON(file string, into interface{}) error {
+func LoadJSON(file string, allowEmpty bool, into interface{}, logTmpl string) error {
+	if !strings.HasSuffix(file, ".json") {
+		file = file + ".json"
+	}
+	if logTmpl != "" {
+		log.Infoa(logTmpl, file)
+	}
 	rd, err := os.Open(file)
-	if err != nil {
+	switch {
+	case allowEmpty && os.IsNotExist(err):
+		log.Warna("`file` not exists, skip loading", file)
+		return nil
+	case err != nil:
 		return err
 	}
 	defer rd.Close()
@@ -132,8 +148,7 @@ func (es *EDState) WriteCmdr(do func(*Commander) error) error {
 }
 
 func (ed *EDState) Save(file string, cmdrFile string) error {
-	log.Infoa("save state to `file`", file)
-	err := SaveJSON(file, ed)
+	err := SaveJSON(file, ed, "save state to `file`")
 	if cmdrFile != "" && ed.Cmdr != nil && ed.Cmdr.FID != "" {
 		if err := ed.Cmdr.Save(cmdrFile); err != nil {
 			log.Errore(err)
@@ -143,8 +158,7 @@ func (ed *EDState) Save(file string, cmdrFile string) error {
 }
 
 func (ed *EDState) Load(file string) error {
-	log.Infoa("load state from `file`", file)
-	return LoadJSON(file, ed)
+	return LoadJSON(file, true, ed, "load state from `file`")
 }
 
 type Jump struct {
@@ -250,12 +264,11 @@ func (cmdr *Commander) Save(file string) error {
 		}
 	}
 	log.Infoa("save `commander` with `fid` to `file`", cmdr.Name, cmdr.FID, file)
-	return SaveJSON(file, cmdr)
+	return SaveJSON(file, cmdr, "")
 }
 
 func (cmdr *Commander) Load(file string) error {
-	log.Infoa("load commander from `file`", file)
-	err := LoadJSON(file, cmdr)
+	err := LoadJSON(file, true, cmdr, "load commander from `file`")
 	cmdr.inShip = cmdr.FindShip(cmdr.ShipID)
 	return err
 }

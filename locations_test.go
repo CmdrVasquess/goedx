@@ -115,7 +115,8 @@ func ExamplePort() {
 	//       1
 	//     ],
 	//     "Name": "Köln"
-	//   }
+	//   },
+	//   "Type": "Orbis"
 	// }
 	// <nil>
 	// {

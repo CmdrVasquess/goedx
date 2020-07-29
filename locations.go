@@ -262,7 +262,7 @@ func (jloc JSONLocation) MarshalJSON() ([]byte, error) {
 }
 
 func (jloc *JSONLocation) UnmarshalJSON(data []byte) (err error) {
-	tmp := make(ggja.GenObj)
+	tmp := make(ggja.BareObj)
 	err = json.Unmarshal(data, &tmp)
 	if err != nil {
 		return err

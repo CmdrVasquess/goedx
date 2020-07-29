@@ -2,8 +2,8 @@ package goedx
 
 const (
 	Major   = 0
-	Minor   = 1
-	Patch   = 6
+	Minor   = 2
+	Patch   = 1
 	Quality = `a`
-	BuildNo = 7
+	BuildNo = 10
 )

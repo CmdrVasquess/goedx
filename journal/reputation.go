@@ -11,10 +11,10 @@ func (t reputationT) String() string    { return string(t) }
 
 type Reputation struct {
 	events.Common
-	Alliance    int
-	Empire      int
-	Federation  int
-	Independent int
+	Alliance    float32
+	Empire      float32
+	Federation  float32
+	Independent float32
 }
 
 func init() {

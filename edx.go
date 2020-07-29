@@ -179,11 +179,6 @@ func (ehe *EventHandlingError) Error() string {
 }
 
 func (ext *Extension) EventHandler(evtType events.Type, raw []byte) (err error) {
-	hdlr := stdEvtHdlrs[evtType.String()]
-	if hdlr == nil {
-		log.Debuga("no handler for `event type`", evtType)
-		return err
-	}
 	event := evtType.New()
 	if err := json.Unmarshal(raw, event); err != nil {
 		log.Errora("cannot parse `event type`: `err`", evtType, err)
@@ -212,7 +207,13 @@ func (ext *Extension) EventHandler(evtType events.Type, raw []byte) (err error) 
 	for i, app := range ext.apps {
 		ext.appToks[i] = ext.prepareApp(app, ext.appNms[i], event)
 	}
-	chg := hdlr(ext, event)
+	var chg Change
+	if hdlr := stdEvtHdlrs[evtType.String()]; hdlr != nil {
+		chg = hdlr(ext, event)
+		log.Tracea("`event type` made `change`", evtType, chg)
+	} else {
+		log.Tracea("no handler for `event type`", evtType)
+	}
 	for i, app := range ext.apps {
 		if tok := ext.appToks[i]; tok != nil {
 			ext.finishApp(app, ext.appNms[i], tok, event, chg)

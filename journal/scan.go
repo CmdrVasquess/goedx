@@ -24,7 +24,7 @@ type Scan struct {
 	ScanType              string
 	BodyID                int
 	BodyName              string
-	Parents               []ggja.GenObj
+	Parents               []ggja.BareObj
 	DistanceFromArrivalLS float64
 	Landable              bool
 	Materials             []ScanMaterial
