@@ -20,11 +20,27 @@ CREATE TABLE cmdrs (
 );
 
 CREATE TABLE visits (
-  id INTEGER PRIMARY KEY
-, cmdr INTEGER NOT NULL REFERENCES cmdrs(id)
+  cmdr INTEGER NOT NULL REFERENCES cmdrs(id)
 , sys INTEGER NOT NULL REFERENCES systems(id)
 , arrive TEXT NOT NULL
+, UNIQUE (cmdr, arrive)
 );
 
-CREATE INDEX visits_arrive ON visits (arrive);
+CREATE INDEX visits_arrive ON visits(arrive);
 
+CREATE TABLE ports (
+  id INTEGER PRIMARY KEY
+, sys INTEGER NOT NULL REFERENCES systems(id)
+, name TEXT NOT NULL
+, type TEXT NOT NULL
+, UNIQUE (sys, name)
+);
+
+CREATE TABLE docked (
+  cmdr INTEGER NOT NULL REFERENCES cmdrs(id)
+, port INTEGER NOT NULL REFERENCES ports(id)
+, arrive TEXT NOT NULL
+, UNIQUE (cmdr, arrive)
+);
+
+CREATE INDEX docked_arrive ON docked(arrive);
