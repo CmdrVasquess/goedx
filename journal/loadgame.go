@@ -16,6 +16,8 @@ type LoadGame struct {
 	Horizons  bool
 }
 
+func (_ *LoadGame) EventType() events.Type { return LoadGameEvent }
+
 func init() {
 	events.RegisterType(string(LoadGameEvent), LoadGameEvent)
 }

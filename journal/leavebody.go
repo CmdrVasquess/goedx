@@ -17,6 +17,8 @@ type LeaveBody struct {
 	BodyID        int
 }
 
+func (_ *LeaveBody) EventType() events.Type { return LeaveBodyEvent }
+
 func init() {
 	events.RegisterType(string(LeaveBodyEvent), LeaveBodyEvent)
 }

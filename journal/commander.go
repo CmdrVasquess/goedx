@@ -15,6 +15,8 @@ type Commander struct {
 	Name string
 }
 
+func (_ *Commander) EventType() events.Type { return CommanderEvent }
+
 func init() {
 	events.RegisterType(string(CommanderEvent), CommanderEvent)
 }

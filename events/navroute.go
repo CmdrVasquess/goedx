@@ -19,6 +19,8 @@ type NavRoute struct {
 	Route []WayPoint
 }
 
+func (_ *NavRoute) EventType() Type { return NavRouteEvent }
+
 func init() {
 	RegisterType(string(StatusEvent), StatusEvent)
 }

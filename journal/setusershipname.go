@@ -17,6 +17,8 @@ type SetUserShipName struct {
 	UserShipName string
 }
 
+func (_ *SetUserShipName) EventType() events.Type { return SetUserShipNameEvent }
+
 func init() {
 	events.RegisterType(string(SetUserShipNameEvent), SetUserShipNameEvent)
 }

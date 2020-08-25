@@ -16,6 +16,8 @@ type ShipyardBuy struct {
 	SellShipID  int
 }
 
+func (_ *ShipyardBuy) EventType() events.Type { return ShipyardBuyEvent }
+
 func init() {
 	events.RegisterType(string(ShipyardBuyEvent), ShipyardBuyEvent)
 }

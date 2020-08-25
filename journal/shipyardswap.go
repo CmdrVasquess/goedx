@@ -15,6 +15,8 @@ type ShipyardSwap struct {
 	StoreShipID int
 }
 
+func (_ *ShipyardSwap) EventType() events.Type { return ShipyardSwapEvent }
+
 func init() {
 	events.RegisterType(string(ShipyardSwapEvent), ShipyardSwapEvent)
 }

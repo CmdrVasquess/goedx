@@ -15,6 +15,8 @@ type SupercruiseEntry struct {
 	SystemAddress uint64
 }
 
+func (_ *SupercruiseEntry) EventType() events.Type { return SupercruiseEntryEvent }
+
 func init() {
 	events.RegisterType(string(SupercruiseEntryEvent), SupercruiseEntryEvent)
 }

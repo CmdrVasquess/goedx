@@ -47,6 +47,8 @@ type {{.Capitals}} struct {
 	// TODO fill in event attributes
 }
 
+func (_ *{{.Capitals}}) EventType() events.Type { return {{.Capitals}}Event }
+
 func init() {
 	events.RegisterType(string({{.Capitals}}Event), {{.Capitals}}Event)
 }

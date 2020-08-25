@@ -17,11 +17,21 @@ type ScanMaterial struct {
 	Percent float32
 }
 
+type ScanRing struct {
+	Name      string
+	RingClass string
+	MassMT    float64
+	InnerRad  float64
+	OuterRad  float64
+}
+
 type Scan struct {
 	events.Common
 	SystemAddress         uint64
 	StarSystem            string
 	ScanType              string
+	StarType              string
+	PlanetClass           string
 	BodyID                int
 	BodyName              string
 	Parents               []ggja.BareObj
@@ -29,9 +39,12 @@ type Scan struct {
 	Landable              bool
 	Materials             []ScanMaterial
 	ReserveLevel          string
+	Rings                 []ScanRing
 	WasDiscovered         bool
 	WasMapped             bool
 }
+
+func (_ *Scan) EventType() events.Type { return ScanEvent }
 
 func init() {
 	events.RegisterType(string(ScanEvent), ScanEvent)

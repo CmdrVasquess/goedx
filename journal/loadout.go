@@ -19,6 +19,8 @@ type Loadout struct {
 	CargoCapacity int
 }
 
+func (_ *Loadout) EventType() events.Type { return LoadoutEvent }
+
 func init() {
 	events.RegisterType(string(LoadoutEvent), LoadoutEvent)
 }

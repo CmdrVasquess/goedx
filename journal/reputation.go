@@ -17,6 +17,8 @@ type Reputation struct {
 	Independent float32
 }
 
+func (_ *Reputation) EventType() events.Type { return ReputationEvent }
+
 func init() {
 	events.RegisterType(string(ReputationEvent), ReputationEvent)
 }

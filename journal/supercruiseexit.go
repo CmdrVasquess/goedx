@@ -18,6 +18,8 @@ type SupercruiseExit struct {
 	BodyType      string
 }
 
+func (_ *SupercruiseExit) EventType() events.Type { return SupercruiseExitEvent }
+
 func init() {
 	events.RegisterType(string(SupercruiseExitEvent), SupercruiseExitEvent)
 }

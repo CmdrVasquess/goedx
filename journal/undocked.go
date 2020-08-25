@@ -15,6 +15,8 @@ type Undocked struct {
 	StationType string
 }
 
+func (_ *Undocked) EventType() events.Type { return UndockedEvent }
+
 func init() {
 	events.RegisterType(string(UndockedEvent), UndockedEvent)
 }

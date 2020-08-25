@@ -19,6 +19,8 @@ type Progress struct {
 	Empire     int
 }
 
+func (_ *Progress) EventType() events.Type { return ProgressEvent }
+
 func init() {
 	events.RegisterType(string(ProgressEvent), ProgressEvent)
 }

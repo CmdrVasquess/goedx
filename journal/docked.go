@@ -18,6 +18,8 @@ type Docked struct {
 	DistFromStarLS float64
 }
 
+func (_ *Docked) EventType() events.Type { return DockedEvent }
+
 func init() {
 	events.RegisterType(string(DockedEvent), DockedEvent)
 }

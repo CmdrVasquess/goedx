@@ -3,12 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
+	"encoding/json"
 	"log"
 	"os"
-	"time"
 
-	"github.com/CmdrVasquess/goedx"
+	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
+
 	bolt "go.etcd.io/bbolt"
 )
 
@@ -17,20 +17,17 @@ func dumpfile(name string) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	jenc := json.NewEncoder(os.Stdout)
 	db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("systems"))
 		crsr := b.Cursor()
-		var sys goedx.System
+		var sys bboltgalaxy.System
 		for k, v := crsr.First(); k != nil; k, v = crsr.Next() {
 			dec := gob.NewDecoder(bytes.NewReader(v))
 			if err = dec.Decode(&sys); err != nil {
 				log.Fatal(err)
 			}
-			fmt.Printf("%d '%s' %v [%s / %s]\n",
-				sys.Addr, sys.Name, sys.Coos,
-				sys.FirstAccess.Format(time.RFC822),
-				sys.LastAccess.Format(time.RFC822),
-			)
+			jenc.Encode(&sys)
 		}
 		return nil
 	})

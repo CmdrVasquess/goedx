@@ -11,6 +11,8 @@ func (t shutdownT) String() string    { return string(t) }
 
 type Shutdown struct{ events.Common }
 
+func (_ *Shutdown) EventType() events.Type { return ShutdownEvent }
+
 func init() {
 	events.RegisterType(string(ShutdownEvent), ShutdownEvent)
 }

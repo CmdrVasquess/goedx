@@ -22,9 +22,25 @@ var TSystems = struct {
 	ID:    bsq.Column{Name: "id"},
 }
 
+var TBodyType = struct {
+	bsq.Table
+	ID, Name bsq.Column
+}{
+	Table: bsq.Table{TableName: "bodytype", TableAlias: "bt"},
+	ID:    bsq.Column{Name: "id"},
+}
+
+var TBodyClass = struct {
+	bsq.Table
+	ID, Typ, Name bsq.Column
+}{
+	Table: bsq.Table{TableName: "bodyclass", TableAlias: "bc"},
+	ID:    bsq.Column{Name: "id"},
+}
+
 var TBodies = struct {
 	bsq.Table
-	Sys, BodyID, Name, Type, DistFromArvl bsq.Column
+	Sys, BodyID, Name, Type, Class, DistFromArvl bsq.Column
 }{
 	Table:        bsq.Table{TableName: "bodies", TableAlias: "b"},
 	BodyID:       bsq.Column{Name: "bid"},
@@ -109,9 +125,9 @@ var (
 			SelectBy: bsq.Cols(&TSystems.Addr),
 		}}
 
-	SqlSysByNAme = bsq.Lazy{
+	SqlSysByName = bsq.Lazy{
 		Query: bsq.Concat{
-			"SELECT ", bsq.Cols(&TSystems.ID, &TSystems.Addr),
+			"SELECT ", bsq.ColsOf(&TSystems),
 			" FROM ", &TSystems,
 			" WHERE lower(", &TSystems.Name, ") = lower(", bsq.Arg{"name"}, ")",
 		}}

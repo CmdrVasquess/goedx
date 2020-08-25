@@ -36,6 +36,7 @@ func Peek(str []byte) (t time.Time, event string, err error) {
 }
 
 type Event interface {
+	EventType() Type
 	Timestamp() time.Time
 	Event() string
 }

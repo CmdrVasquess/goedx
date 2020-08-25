@@ -20,6 +20,8 @@ type Status struct {
 	}
 }
 
+func (_ *Status) EventType() Type { return StatusEvent }
+
 // Read: https://forums.frontier.co.uk/forums/elite-api-and-tools/
 const (
 	FStatusDocked StatusFlag = (1 << iota)

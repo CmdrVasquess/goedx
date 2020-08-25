@@ -26,6 +26,8 @@ type FSDJump struct {
 	SystemSecurityL7d      string `json:"SystemSecurity_Localised"`
 }
 
+func (_ *FSDJump) EventType() events.Type { return FSDJumpEvent }
+
 func init() {
 	events.RegisterType(string(FSDJumpEvent), FSDJumpEvent)
 }

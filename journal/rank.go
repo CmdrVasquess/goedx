@@ -19,6 +19,8 @@ type Rank struct {
 	Empire     int
 }
 
+func (_ *Rank) EventType() events.Type { return RankEvent }
+
 func init() {
 	events.RegisterType(string(RankEvent), RankEvent)
 }

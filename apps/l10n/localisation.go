@@ -23,12 +23,12 @@ type Locales struct {
 	BaseDir     string
 	edState     *goedx.EDState
 	currentLang string
-	shiptype    map[string]string
-	matRawNames map[string]string
-	matManNames map[string]string
-	matEncNames map[string]string
-	economy     map[string]string
-	security    map[string]string
+	Shiptypes   map[string]string
+	MatsRaw     map[string]string
+	MatsMan     map[string]string
+	MatsEnc     map[string]string
+	Economies   map[string]string
+	Securities  map[string]string
 }
 
 func New(dir string, edState *goedx.EDState) *Locales {
@@ -42,27 +42,27 @@ func (loc *Locales) Close() {
 }
 
 func (loc *Locales) ShipType(key string) (string, bool) {
-	return loc.local(loc.shiptype, key)
+	return loc.local(loc.Shiptypes, key)
 }
 
 func (loc *Locales) Economy(key string) (string, bool) {
-	return loc.local(loc.economy, key)
+	return loc.local(loc.Economies, key)
 }
 
 func (loc *Locales) Security(key string) (string, bool) {
-	return loc.local(loc.security, key)
+	return loc.local(loc.Securities, key)
 }
 
 func (loc *Locales) RawMaterial(key string) (string, bool) {
-	return loc.local(loc.matRawNames, key)
+	return loc.local(loc.MatsRaw, key)
 }
 
 func (loc *Locales) ManMaterial(key string) (string, bool) {
-	return loc.local(loc.matManNames, key)
+	return loc.local(loc.MatsMan, key)
 }
 
 func (loc *Locales) EncMaterial(key string) (string, bool) {
-	return loc.local(loc.matEncNames, key)
+	return loc.local(loc.MatsEnc, key)
 }
 
 func (loc *Locales) local(m map[string]string, key string) (string, bool) {
@@ -82,6 +82,16 @@ func getLang(edlang string) string {
 		return lang
 	}
 	return fmt.Sprintf("%s-%s", lang, region)
+}
+
+func normKey(key string) string {
+	if key[0] == '$' {
+		key = key[1:]
+	}
+	if l := len(key) - 1; key[l] == ';' {
+		key = key[:l]
+	}
+	return key
 }
 
 func (loc *Locales) PrepareEDEvent(e events.Event) interface{} {
@@ -131,12 +141,12 @@ func (loc *Locales) save() {
 		return
 	}
 	log.Debuga("saving current `lang` to `dir`", loc.currentLang, loc.BaseDir)
-	loc.saveMap(mapShiptype, loc.shiptype)
-	loc.saveMap(mapEconomy, loc.economy)
-	loc.saveMap(mapSecurity, loc.security)
-	loc.saveMap(mapMatNamesRaw, loc.matRawNames)
-	loc.saveMap(mapMatNamesMan, loc.matManNames)
-	loc.saveMap(mapMatNamesEnc, loc.matEncNames)
+	loc.saveMap(mapShiptype, loc.Shiptypes)
+	loc.saveMap(mapEconomy, loc.Economies)
+	loc.saveMap(mapSecurity, loc.Securities)
+	loc.saveMap(mapMatNamesRaw, loc.MatsRaw)
+	loc.saveMap(mapMatNamesMan, loc.MatsMan)
+	loc.saveMap(mapMatNamesEnc, loc.MatsEnc)
 }
 
 func (loc *Locales) saveMap(name string, m map[string]string) {
@@ -163,12 +173,12 @@ func (loc *Locales) saveMap(name string, m map[string]string) {
 
 func (loc *Locales) clearMaps() {
 	log.Debugs("clearing maps")
-	loc.shiptype = make(map[string]string)
-	loc.economy = make(map[string]string)
-	loc.security = make(map[string]string)
-	loc.matRawNames = make(map[string]string)
-	loc.matManNames = make(map[string]string)
-	loc.matEncNames = make(map[string]string)
+	loc.Shiptypes = make(map[string]string)
+	loc.Economies = make(map[string]string)
+	loc.Securities = make(map[string]string)
+	loc.MatsRaw = make(map[string]string)
+	loc.MatsMan = make(map[string]string)
+	loc.MatsEnc = make(map[string]string)
 }
 
 func (loc *Locales) load(lang string) {
@@ -179,12 +189,12 @@ func (loc *Locales) load(lang string) {
 	}
 	log.Debuga("load `lang` from `dir`", lang, loc.BaseDir)
 	loc.currentLang = lang
-	loc.shiptype = loc.loadMap(mapShiptype)
-	loc.economy = loc.loadMap(mapEconomy)
-	loc.security = loc.loadMap(mapSecurity)
-	loc.matRawNames = loc.loadMap(mapMatNamesRaw)
-	loc.matManNames = loc.loadMap(mapMatNamesMan)
-	loc.matEncNames = loc.loadMap(mapMatNamesEnc)
+	loc.Shiptypes = loc.loadMap(mapShiptype)
+	loc.Economies = loc.loadMap(mapEconomy)
+	loc.Securities = loc.loadMap(mapSecurity)
+	loc.MatsRaw = loc.loadMap(mapMatNamesRaw)
+	loc.MatsMan = loc.loadMap(mapMatNamesMan)
+	loc.MatsEnc = loc.loadMap(mapMatNamesEnc)
 }
 
 func (loc *Locales) loadMap(name string) map[string]string {

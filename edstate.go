@@ -306,9 +306,9 @@ type Ship struct {
 }
 
 type Materials struct {
-	Raw map[string]Material
-	Man map[string]Material
-	Enc map[string]Material
+	Raw map[string]*Material
+	Man map[string]*Material
+	Enc map[string]*Material
 }
 
 type Material struct {

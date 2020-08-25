@@ -19,6 +19,8 @@ type ApproachSettlement struct {
 	Longitude     float32
 }
 
+func (_ *ApproachSettlement) EventType() events.Type { return ApproachSettlementEvent }
+
 func init() {
 	events.RegisterType(string(ApproachSettlementEvent), ApproachSettlementEvent)
 }

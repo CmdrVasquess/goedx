@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"compress/gzip"
 	"database/sql"
 	"encoding/json"
@@ -16,17 +15,96 @@ import (
 	"strings"
 	"time"
 
+	"git.fractalqb.de/fractalqb/sqlize"
+	"git.fractalqb.de/fractalqb/sqlize/null"
+	sgx "github.com/CmdrVasquess/goedx/apps/sqlitegalaxy"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/goedx/journal"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 const sqliteTs = "2006-01-02 15:04:05"
 
+type system struct {
+	id   int
+	addr int64
+	name string
+}
+
+func (s *system) clear() {
+	s.id = sqlize.NoID
+	s.addr = sqlize.NoID
+	s.name = ""
+}
+
+func (s *system) load(db sqlize.Tx, sysName string, sysAddr int64, starPos *[3]float64) {
+	var sysx, sysy, sysz sql.NullFloat64
+	if sysAddr != 0 {
+		s.addr = sysAddr
+		err := db.QueryRow(sgx.SqlSysByAddr.MustSQL(), sysAddr).
+			Scan(&s.id, &s.name, &sysx, &sysy, &sysz)
+		switch {
+		case err == nil:
+			if !sysx.Valid && starPos != nil {
+				sysAddCoos(db, s.id, starPos)
+			}
+			return
+		case err != sql.ErrNoRows:
+			log.Panic(err)
+		}
+	}
+	s.name = sysName
+	err := db.QueryRow(sgx.SqlSysByName.MustSQL(), sysName).
+		Scan(&s.id, null.Int64{P: &s.addr})
+	switch {
+	case err == sql.ErrNoRows:
+		if starPos != nil {
+			sysx.Valid = true
+			sysx.Float64 = starPos[0]
+			sysy.Valid = true
+			sysy.Float64 = starPos[1]
+			sysz.Valid = true
+			sysz.Float64 = starPos[2]
+		}
+		res, err := db.Exec(sgx.SqlNewSystem.MustSQL(),
+			sysName,
+			null.Int64{P: &sysAddr},
+			sysx, sysy, sysz,
+		)
+		if err != nil {
+			log.Panic(err)
+		}
+		s.name = sysName
+		countSystems++
+		if id, err := res.LastInsertId(); err != nil {
+			log.Panic(err)
+		} else {
+			s.id = int(id)
+		}
+		return
+	case err != nil:
+		log.Panic(err)
+	}
+	if s.addr == sqlize.NoID {
+		if sysAddr != sqlize.NoID {
+			// TODO sqlize
+			_, err := db.Exec(`UPDATE systems SET addr=$1 WHERE id=$2`,
+				sysAddr,
+				s.id)
+			if err != nil {
+				log.Printf("failed to set system addr %d for %s: %s",
+					sysAddr, sysName, err)
+			}
+		}
+	} else if sysAddr != 0 && s.addr != sysAddr {
+		log.Println("ambg addr for %s: %d / %d",
+			sysName, s.addr, sysAddr)
+	}
+}
+
 var (
 	fDB          string
-	evtCmdr      = []byte(`"event":"Commander"`)
-	evtLdg       = []byte(`"event":"LoadGame"`)
-	evtFSDJ      = []byte(`"event":"FSDJump"`)
-	evtDocked    = []byte(`"event":"Docked"`)
+	fDebug       bool
 	startAfter   time.Time
 	countSystems int
 	countPorts   int
@@ -57,68 +135,71 @@ type Docked struct {
 	StationType string
 }
 
+type Scanned struct {
+	SystemAddress         int64
+	StarSystem            string
+	BodyID                int
+	BodyName              string
+	DistanceFromArrivalLS float64
+}
+
+func (scn *Scanned) LocalName() (string, bool) {
+	if strings.HasPrefix(strings.ToLower(scn.BodyName), strings.ToLower(scn.StarSystem)) {
+		tmp := scn.BodyName[len(scn.StarSystem):]
+		return strings.TrimSpace(tmp), true
+	}
+	return scn.BodyName, false
+}
+
 var (
 	cmdrId        int
-	currentSystem int
+	currentSystem system
 )
 
-func importFrom(db *sql.DB, rd io.Reader) {
-	tx, err := db.Begin()
+var evtHdrls = map[string]func(sqlize.Tx, []byte){
+	journal.FSDJumpEvent.String():   fsdJump,
+	journal.DockedEvent.String():    docked,
+	journal.CommanderEvent.String(): cmdrEvent,
+	journal.ScanEvent.String():      scanned,
+	journal.LoadGameEvent.String():  ldgEvent,
+}
+
+func importFrom(db sqlize.SQL, rd io.Reader) {
+	err := sqlize.Transact(db, func(tx sqlize.Tx) error {
+		scn := bufio.NewScanner(rd)
+		for scn.Scan() {
+			line := scn.Bytes()
+			t, evt, err := events.Peek(line)
+			if err != nil {
+				return err
+			}
+			if !t.After(startAfter) {
+				continue
+			}
+			if hdlr := evtHdrls[evt]; hdlr != nil {
+				hdlr(tx, line)
+			}
+		}
+		return nil
+	})
 	if err != nil {
 		log.Println(err)
-		return
-	}
-	defer func() {
-		if p := recover(); p == nil {
-			tx.Commit()
-		} else {
-			log.Println("rollback transaction")
-			tx.Rollback()
-		}
-	}()
-	scn := bufio.NewScanner(rd)
-	for scn.Scan() {
-		line := scn.Bytes()
-		switch {
-		case bytes.Index(line, evtFSDJ) >= 0:
-			if cmdrId <= 0 {
-				log.Panicf("no commander for jump: %s", string(line))
-			}
-			fsdJump(tx, line, cmdrId)
-		case bytes.Index(line, evtDocked) >= 0:
-			docked(tx, line)
-		case bytes.Index(line, evtCmdr) >= 0:
-			cmdrId = cmdrEvent(tx, line)
-			if cmdrId <= 0 {
-				log.Panicf("no commander for jump: %s", string(line))
-			}
-		case bytes.Index(line, evtLdg) >= 0:
-			cmdrId = ldgEvent(tx, line)
-			if cmdrId <= 0 {
-				log.Panicf("no commander for jump: %s", string(line))
-			}
-		}
 	}
 }
 
-func switchCmdr(db *sql.Tx, cmdrNm, cmdrFid string) int {
+func switchCmdr(db sqlize.Tx, cmdrNm, cmdrFid string) (cmdrId int) {
 	if cmdrNm == "" {
 		log.Panic("commander without name")
 	}
-	var cmdrId int
 	var fid sql.NullString
-	err := db.QueryRow(`SELECT id, fid FROM cmdrs WHERE name=$1`, cmdrNm).
+	err := db.QueryRow(sgx.SqlCmdrByName.MustSQL(), cmdrNm).
 		Scan(&cmdrId, &fid)
 	switch {
 	case err == sql.ErrNoRows:
-		var res sql.Result
-		var err error
-		if cmdrFid == "" {
-			res, err = db.Exec(`INSERT INTO cmdrs (name) VALUES ($1)`, cmdrNm)
-		} else {
-			res, err = db.Exec(`INSERT INTO cmdrs (fid, name) VALUES ($1, $2)`,
-				cmdrFid, cmdrNm)
-		}
+		res, err := db.Exec(sgx.SqlNewCmdr.MustSQL(),
+			null.String{P: &cmdrFid},
+			cmdrNm,
+		)
 		if err != nil {
 			log.Panic(err)
 		}
@@ -132,7 +213,7 @@ func switchCmdr(db *sql.Tx, cmdrNm, cmdrFid string) int {
 		log.Panic(err)
 	}
 	if (!fid.Valid || fid.String == "") && cmdrFid != "" {
-		_, err = db.Exec(`UPDATE cmdrs SET fid=$1 WHERE id=$2`, cmdrFid, cmdrId)
+		_, err = db.Exec(sgx.SqlCmdrSetFID.MustSQL(), cmdrFid, cmdrId)
 		if err != nil {
 			log.Printf("cannot update fid %s of commander %s: %s",
 				cmdrFid, cmdrNm, err)
@@ -141,24 +222,33 @@ func switchCmdr(db *sql.Tx, cmdrNm, cmdrFid string) int {
 	return cmdrId
 }
 
-func cmdrEvent(db *sql.Tx, line []byte) int {
+func cmdrEvent(db sqlize.Tx, line []byte) {
 	var cmdr Commander
 	if err := json.Unmarshal(line, &cmdr); err != nil {
 		log.Panic(err)
 	}
-	return switchCmdr(db, cmdr.Name, cmdr.FID)
+	cmdrId = switchCmdr(db, cmdr.Name, cmdr.FID)
+	if cmdrId <= 0 {
+		log.Panicf("no commander for jump: %s", string(line))
+	}
 }
 
-func ldgEvent(db *sql.Tx, line []byte) int {
+func ldgEvent(db sqlize.Tx, line []byte) {
 	var ldg LoadGame
 	if err := json.Unmarshal(line, &ldg); err != nil {
 		log.Panic(err)
 	}
-	currentSystem = 0
-	return switchCmdr(db, ldg.Commander, "")
+	currentSystem.clear()
+	cmdrId = switchCmdr(db, ldg.Commander, "")
+	if cmdrId <= 0 {
+		log.Panicf("no commander on game load: %s", string(line))
+	}
 }
 
-func fsdJump(db *sql.Tx, line []byte, cmdrId int) {
+func fsdJump(db sqlize.Tx, line []byte) {
+	if cmdrId <= 0 {
+		log.Panicf("no commander for jump: %s", string(line))
+	}
 	var jump FSDJump
 	if err := json.Unmarshal(line, &jump); err != nil {
 		log.Panic(err)
@@ -166,30 +256,33 @@ func fsdJump(db *sql.Tx, line []byte, cmdrId int) {
 	if !jump.Timestamp.After(startAfter) {
 		return
 	}
-	currentSystem = getSystem(db, jump.StarSystem, jump.SystemAddress, &jump.StarPos)
-	if currentSystem <= 0 {
+	currentSystem.load(db, jump.StarSystem, jump.SystemAddress, &jump.StarPos)
+	if currentSystem.id <= 0 {
 		log.Panicf("no system for jump: %+v", &jump)
 	}
-	_, err := db.Exec(`INSERT INTO visits (cmdr, sys, arrive) VALUES ($1, $2, $3)`,
-		cmdrId, currentSystem, jump.Timestamp)
+	_, err := db.Exec(sgx.SqlAddVisit.MustSQL(),
+		cmdrId, currentSystem.id, jump.Timestamp)
 	if err != nil {
 		log.Panic(err)
 	}
 	countVisits++
 }
 
-func docked(db *sql.Tx, line []byte) {
+func docked(db sqlize.Tx, line []byte) {
 	var dock Docked
 	if err := json.Unmarshal(line, &dock); err != nil {
 		log.Panic(err)
+	}
+	if !dock.Timestamp.After(startAfter) {
+		return
 	}
 	if dock.StationName == "" {
 		log.Println("no port name in ", string(line))
 		return
 	}
-	currentSystem = getSystem(db, dock.StarSystem, 0, nil)
-	pid := getPort(db, currentSystem, dock.StationName, dock.StationType)
-	_, err := db.Exec(`INSERT INTO docked (cmdr, port, arrive) VALUES ($1, $2, $3)`,
+	currentSystem.load(db, dock.StarSystem, 0, nil)
+	pid := getPort(db, currentSystem.id, dock.StationName, dock.StationType)
+	_, err := db.Exec(sgx.SqlAddDocked.MustSQL(),
 		cmdrId, pid, dock.Timestamp)
 	if err != nil {
 		log.Panic(err)
@@ -197,20 +290,46 @@ func docked(db *sql.Tx, line []byte) {
 	countDocked++
 }
 
-func getPort(db *sql.Tx, sys int, name, typ string) (pid int) {
+func scanned(db sqlize.Tx, line []byte) {
+	var scn Scanned
+	if err := json.Unmarshal(line, &scn); err != nil {
+		log.Panic(err)
+	}
+	bodyLocal, _ := scn.LocalName()
+	var bid int
+	var typ string
+	var distfa float64
+	err := db.QueryRow(sgx.SqlBodyByName.MustSQL(), currentSystem.id, bodyLocal).Scan(
+		&bid,
+		null.String{P: &typ},
+		null.Float64{P: &distfa},
+	)
+	if err == sql.ErrNoRows {
+		_, err = db.Exec(sgx.SqlInsertBody.MustSQL(),
+			currentSystem.id,
+			scn.BodyID,
+			bodyLocal,
+			sql.NullString{},
+			scn.DistanceFromArrivalLS)
+		if err != nil {
+			log.Panic(err)
+		}
+		return
+	} else if err != nil {
+		log.Panic(err)
+	}
+}
+
+func getPort(db sqlize.Tx, sys int, name, typ string) (pid int) {
 	if sys == 0 {
 		log.Printf("searching port %s (%s) in system 0", name, typ)
 		return 0
 	}
-	err := db.QueryRow(`SELECT id FROM ports WHERE sys=$1 and name=$2`,
-		sys,
-		name,
-	).Scan(&pid)
+	err := db.QueryRow(sgx.SqlPortBySysNm.MustSQL(), sys, name).Scan(&pid)
 	if err == nil {
 		return pid
 	}
-	res, err := db.Exec(`INSERT INTO ports (sys, name, type) VALUES ($1, $2, $3)`,
-		sys, name, strings.ToLower(typ))
+	res, err := db.Exec(sgx.SqlNewPort.MustSQL(), sys, name, strings.ToLower(typ))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -223,8 +342,8 @@ func getPort(db *sql.Tx, sys int, name, typ string) (pid int) {
 	return pid
 }
 
-func sysAddCoos(db *sql.Tx, sysId int, starPos *[3]float64) {
-	_, err := db.Exec(`UPDATE systems SET x=$1, y=$2, z=$3 WHERE id=$4`,
+func sysAddCoos(db sqlize.Tx, sysId int, starPos *[3]float64) {
+	_, err := db.Exec(sgx.SqlSetSysCoos.MustSQL(),
 		starPos[0], starPos[1], starPos[2],
 		sysId)
 	if err != nil {
@@ -232,87 +351,7 @@ func sysAddCoos(db *sql.Tx, sysId int, starPos *[3]float64) {
 	}
 }
 
-func getSystem(db *sql.Tx, sysName string, sysAddr int64, starPos *[3]float64) int {
-	var sysId int
-	var sysx, sysy, sysz sql.NullFloat64
-	if sysAddr != 0 {
-		err := db.QueryRow(`SELECT id, x FROM systems WHERE addr = $1`, sysAddr).
-			Scan(&sysId, &sysx)
-		switch {
-		case err == nil:
-			if !sysx.Valid && starPos != nil {
-				sysAddCoos(db, sysId, starPos)
-			}
-			return sysId
-		case err != sql.ErrNoRows:
-			log.Panic(err)
-		}
-	}
-	var addr sql.NullInt64
-	err := db.QueryRow(`SELECT id, addr FROM systems WHERE lower(name)=lower($1)`,
-		sysName).
-		Scan(&sysId, &addr)
-	switch {
-	case err == sql.ErrNoRows:
-		if starPos != nil {
-			sysx.Valid = true
-			sysx.Float64 = starPos[0]
-			sysy.Valid = true
-			sysy.Float64 = starPos[1]
-			sysz.Valid = true
-			sysz.Float64 = starPos[2]
-		}
-		if sysAddr > 0 {
-			res, err := db.Exec(
-				`INSERT INTO systems (name, addr, x, y, z) VALUES ($1, $2, $3, $4, $5)`,
-				sysName,
-				sysAddr,
-				sysx, sysy, sysz)
-			if err != nil {
-				log.Panic(err)
-			}
-			countSystems++
-			if id, err := res.LastInsertId(); err != nil {
-				log.Panic(err)
-			} else {
-				return int(id)
-			}
-		} else {
-			res, err := db.Exec(
-				`INSERT INTO systems (name, x, y, z) VALUES ($1, $2, $3, $4)`,
-				sysName,
-				sysx, sysy, sysz)
-			if err != nil {
-				log.Panic(err)
-			}
-			countSystems++
-			if id, err := res.LastInsertId(); err != nil {
-				log.Panic(err)
-			} else {
-				return int(id)
-			}
-		}
-	case err != nil:
-		log.Panic(err)
-	}
-	if !addr.Valid || addr.Int64 == 0 {
-		if sysAddr != 0 {
-			_, err := db.Exec(`UPDATE systems SET addr=$1 WHERE id=$2`,
-				sysAddr,
-				sysId)
-			if err != nil {
-				log.Printf("failed to set system addr %d for %s: %s",
-					sysAddr, sysName, err)
-			}
-		}
-	} else if sysAddr != 0 && addr.Int64 != sysAddr {
-		log.Println("ambg addr for %s: %d / %d",
-			sysName, addr, sysAddr)
-	}
-	return sysId
-}
-
-func importLog(db *sql.DB, file string) {
+func importLog(db sqlize.SQL, file string) {
 	rd, err := os.Open(file)
 	if err != nil {
 		log.Panic(err)
@@ -321,7 +360,7 @@ func importLog(db *sql.DB, file string) {
 	importFrom(db, rd)
 }
 
-func importGz(db *sql.DB, file string) {
+func importGz(db sqlize.SQL, file string) {
 	rd, err := os.Open(file)
 	if err != nil {
 		log.Panic(err)
@@ -349,6 +388,7 @@ func lastJump(db *sql.DB) (t time.Time, err error) {
 
 func main() {
 	flag.StringVar(&fDB, "db", "", "sqlite3 DB file")
+	flag.BoolVar(&fDebug, "debug", false, "debug import")
 	flag.Parse()
 	sigs := make(chan os.Signal, 1) // '1' is important for select to not always default
 	signal.Notify(sigs, os.Interrupt)
@@ -357,6 +397,13 @@ func main() {
 		log.Fatal(err)
 	}
 	defer db.Close()
+	var sdb sqlize.SQL
+	if fDebug {
+		sdb = sqlize.StdLogConnection(db)
+		log.SetFlags(log.Lshortfile)
+	} else {
+		sdb = db
+	}
 	startAfter, err = lastJump(db)
 	if err != nil && err != sql.ErrNoRows {
 		log.Fatal(err)
@@ -366,9 +413,9 @@ ARGS_LOOP:
 		log.Printf("import %s", arg)
 		switch filepath.Ext(arg) {
 		case ".log":
-			importLog(db, arg)
+			importLog(sdb, arg)
 		case ".gz":
-			importGz(db, arg)
+			importGz(sdb, arg)
 		}
 		select {
 		case <-sigs:

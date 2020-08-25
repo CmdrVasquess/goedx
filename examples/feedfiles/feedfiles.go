@@ -60,6 +60,7 @@ func main() {
 		gxy, err := bboltgalaxy.Open(*gxyFile)
 		if err == nil {
 			ext.Galaxy = gxy
+			ext.AddApp("bbgxy", gxy)
 			defer gxy.Close()
 		}
 	}

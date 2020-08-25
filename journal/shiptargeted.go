@@ -15,6 +15,8 @@ type ShipTargeted struct {
 	ShipL7d string `json:"Ship_Localised"`
 }
 
+func (_ *ShipTargeted) EventType() events.Type { return ShipTargetedEvent }
+
 func init() {
 	events.RegisterType(string(ShipTargetedEvent), ShipTargetedEvent)
 }

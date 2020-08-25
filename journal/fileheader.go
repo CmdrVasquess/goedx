@@ -15,6 +15,8 @@ type Fileheader struct {
 	Language    string `json:"language"`
 }
 
+func (_ *Fileheader) EventType() events.Type { return FileheaderEvent }
+
 func init() {
 	events.RegisterType(string(FileheaderEvent), FileheaderEvent)
 }

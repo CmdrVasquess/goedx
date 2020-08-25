@@ -19,6 +19,8 @@ type Location struct {
 	StationType   string
 }
 
+func (_ *Location) EventType() events.Type { return LocationEvent }
+
 func init() {
 	events.RegisterType(string(LocationEvent), LocationEvent)
 }

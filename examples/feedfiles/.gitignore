@@ -1,1 +1,5 @@
 /feedfiles
+/l10n/
+/F*.json
+/galaxy.bbolt
+/goedx-state.json
