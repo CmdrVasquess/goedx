@@ -89,23 +89,23 @@ var TDocked = struct {
 
 var (
 	SqlCmdrByName = bsq.Lazy{
-		Query: bsq.Select1Table{From: &TCmdrs, SelectBy: bsq.Cols(&TCmdrs.Name)}}
+		Query: bsq.Select{From: &TCmdrs, SelectBy: bsq.Cols(&TCmdrs.Name)}}
 
 	SqlNewCmdr = bsq.Lazy{
 		Query: bsq.CreateStatement{Table: &TCmdrs, ID: &TCmdrs.ID}}
 
 	SqlCmdrSetFID = bsq.Lazy{
-		Query: bsq.Update1Table{
+		Query: bsq.Update{
 			Set:      bsq.Cols(&TCmdrs.FID),
 			SelectBy: bsq.Cols(&TCmdrs.ID),
 		}}
 
-	SqlAddVisit = bsq.Lazy{Query: bsq.Insert1Table{bsq.ColsOf(&TVisits)}}
+	SqlAddVisit = bsq.Lazy{Query: bsq.Insert{bsq.ColsOf(&TVisits)}}
 
-	SqlAddDocked = bsq.Lazy{Query: bsq.Insert1Table{bsq.ColsOf(&TDocked)}}
+	SqlAddDocked = bsq.Lazy{Query: bsq.Insert{bsq.ColsOf(&TDocked)}}
 
 	SqlPortBySysNm = bsq.Lazy{
-		Query: bsq.Select1Table{
+		Query: bsq.Select{
 			Columns:  bsq.Cols(&TPorts.ID),
 			SelectBy: bsq.Cols(&TPorts.Sys, &TPorts.Name),
 		}}
@@ -114,13 +114,13 @@ var (
 		Query: bsq.CreateStatement{Table: &TPorts, ID: &TPorts.ID}}
 
 	SqlSetSysCoos = bsq.Lazy{
-		Query: bsq.Update1Table{
+		Query: bsq.Update{
 			Set:      bsq.Cols(&TSystems.X, &TSystems.Y, &TSystems.Z),
 			SelectBy: bsq.Cols(&TSystems.ID),
 		}}
 
 	SqlSysByAddr = bsq.Lazy{
-		Query: bsq.Select1Table{
+		Query: bsq.Select{
 			From:     &TSystems,
 			SelectBy: bsq.Cols(&TSystems.Addr),
 		}}
@@ -136,11 +136,11 @@ var (
 		Query: bsq.CreateStatement{Table: &TSystems, ID: &TSystems.ID}}
 
 	SqlBodyByName = bsq.Lazy{
-		Query: bsq.Select1Table{
+		Query: bsq.Select{
 			From:     &TBodies,
 			SelectBy: bsq.Cols(&TBodies.Sys, &TBodies.Name),
 		}}
 
 	SqlInsertBody = bsq.Lazy{
-		Query: bsq.Insert1Table{Columns: bsq.ColsOf(&TBodies)}}
+		Query: bsq.Insert{Columns: bsq.ColsOf(&TBodies)}}
 )
