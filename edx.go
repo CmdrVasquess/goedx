@@ -58,7 +58,7 @@ func (ext *Extension) Run(latestJournal bool) (err error) {
 		Quit:      make(chan bool),
 	}
 	if ext.watch.Dir == "" {
-		ext.watch.Dir, err = FindJournals()
+		ext.watch.Dir, err = watched.FindJournalDir()
 		if err != nil {
 			return err
 		}

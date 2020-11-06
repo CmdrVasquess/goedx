@@ -97,8 +97,7 @@ func (s *system) load(db sqlize.Tx, sysName string, sysAddr int64, starPos *[3]f
 			}
 		}
 	} else if sysAddr != 0 && s.addr != sysAddr {
-		log.Println("ambg addr for %s: %d / %d",
-			sysName, s.addr, sysAddr)
+		log.Printf("ambg addr for %s: %d / %d", sysName, s.addr, sysAddr)
 	}
 }
 
