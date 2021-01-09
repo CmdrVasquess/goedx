@@ -1,22 +1,23 @@
 package goedx
 
 import (
+	"github.com/CmdrVasquess/goedx/att"
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
-	stdEvtHdlrs[journal.SupercruiseEntryEvent.String()] = ehSupercruiseEntry
+	evtHdlrs[journal.SupercruiseEntryEvent.String()] = ehSupercruiseEntry
 }
 
-func ehSupercruiseEntry(ext *Extension, _ events.Event) (chg Change) {
-	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
-		if cmdr.At.Location == nil {
+func ehSupercruiseEntry(ed *EDState, _ events.Event) (chg att.Change, err error) {
+	err = ed.WrLocked(func() error {
+		if ed.Loc.Location == nil {
 			return nil
 		}
-		cmdr.At.Location = cmdr.At.Location.System()
+		ed.Loc.Location = ed.Loc.Location.System()
 		chg = ChgLocation
 		return nil
-	}))
-	return chg
+	})
+	return chg, err
 }

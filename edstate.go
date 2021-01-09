@@ -4,21 +4,23 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
-	"time"
+
+	"github.com/CmdrVasquess/goedx/att"
+	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/watched"
 )
 
-const JumpHitsMax = 100
+type HandlerFunc func(*EDState, events.Event) (att.Change, error)
+
+var evtHdlrs = make(map[string]HandlerFunc)
 
 const (
-	ChgGame Change = (1 << iota)
+	ChgGame att.Change = (1 << iota)
 	ChgCommander
-
 	ChgLocation
 	ChgSystem
-
 	ChgShip
 )
 
@@ -64,8 +66,15 @@ func LoadJSON(file string, allowEmpty bool, into interface{}, logTmpl string) er
 	return dec.Decode(into)
 }
 
+type Config struct {
+	Galaxy          Galaxy
+	CmdrFile        func(fid, name string) string
+	ShutdownLogsOut bool
+}
+
 type EDState struct {
-	Lock         sync.RWMutex `json:"-"`
+	Config
+
 	GoEDXversion struct{ Major, Minor, Patch int }
 	// Is modified w/o using Lock!
 	EDVersion string
@@ -75,8 +84,12 @@ type EDState struct {
 		Lang   string
 		Region string
 	}
-	Cmdr             *Commander `json:"-"`
-	LastJournalEvent time.Time
+	Cmdr     *Commander `json:"-"`
+	Loc      JSONLocation
+	Ships    map[int]*Ship `json:"-"`
+	JumpHist JumpHist      `json:"-"`
+
+	lock sync.RWMutex
 }
 
 const msgNoCmdr = "no current commander"
@@ -87,6 +100,16 @@ func NewEDState() *EDState {
 	res.GoEDXversion.Minor = Minor
 	res.GoEDXversion.Patch = Patch
 	return res
+}
+
+func (ed *EDState) ResetCmdr() {
+	ed.Cmdr = nil
+	ed.Loc.Location = nil
+	ed.Ships = make(map[int]*Ship)
+	ed.JumpHist = JumpHist{
+		Jumps: nil,
+		Last:  0,
+	}
 }
 
 func (es *EDState) SetEDVersion(v string) {
@@ -119,32 +142,53 @@ func (es *EDState) SetLanguage(lang string) {
 	es.L10n.Lang, es.L10n.Region = ParseEDLang(lang)
 }
 
-func (es *EDState) MustCommander() *Commander {
-	if es.Cmdr == nil {
+func (ed *EDState) SwitchCommander(fid string, name string) {
+	if ed.Cmdr != nil {
+		file := ed.CmdrFile(fid, name)
+		if err := ed.Cmdr.Save(file); err != nil {
+			log.Errore(err)
+		}
+	}
+	ed.ResetCmdr()
+	if fid == "" {
+		return
+	}
+	if name == "" {
+		log.Errora("Empty commander name for `FID`", fid)
+		return
+	}
+	ed.Cmdr = new(Commander)
+	err := LoadJSON(ed.CmdrFile(fid, name), true, ed.Cmdr, "load commander from `file`")
+	if err != nil {
+		log.Errore(err)
+		return
+	}
+	ed.Cmdr.Name.Set(name, 0)
+	if ed.Cmdr.FID == "" {
+		ed.Cmdr.FID = fid
+		return
+	}
+	ed.Cmdr.FID = fid
+	// TODO Load ships and jump-hist
+}
+
+func (ed *EDState) MustCommander() *Commander {
+	if ed.Cmdr == nil {
 		panic(msgNoCmdr)
 	}
-	return es.Cmdr
+	return ed.Cmdr
 }
 
-func (es *EDState) Read(do func() error) error {
-	es.Lock.RLock()
-	defer es.Lock.RUnlock()
+func (es *EDState) RdLocked(do func() error) error {
+	es.lock.RLock()
+	defer es.lock.RUnlock()
 	return do()
 }
 
-func (es *EDState) Write(do func() error) error {
-	es.Lock.Lock()
-	defer es.Lock.Unlock()
+func (es *EDState) WrLocked(do func() error) error {
+	es.lock.Lock()
+	defer es.lock.Unlock()
 	return do()
-}
-
-func (es *EDState) WriteCmdr(do func(*Commander) error) error {
-	es.Lock.Lock()
-	defer es.Lock.Unlock()
-	if es.Cmdr == nil {
-		return errors.New(msgNoCmdr)
-	}
-	return do(es.Cmdr)
 }
 
 func (ed *EDState) Save(file string, cmdrFile string) error {
@@ -161,157 +205,56 @@ func (ed *EDState) Load(file string) error {
 	return LoadJSON(file, true, ed, "load state from `file`")
 }
 
-type Jump struct {
-	SysAddr uint64
-	Arrive  time.Time
-}
-
-type RawMatStats struct {
-	Min, Max float32
-	Sum      float64
-	Count    int
-}
-
-type Commander struct {
-	FID         string
-	Name        string
-	Ranks       Ranks
-	ShipID      int
-	At          JSONLocation
-	Ships       map[int]*Ship
-	Mats        Materials
-	inShip      *Ship
-	JumpHist    []Jump
-	LastJump    int
-	RawMatStats map[string]*RawMatStats
-}
-
-func NewCommander(fid string) *Commander {
-	return &Commander{
-		FID:         fid,
-		Ships:       make(map[int]*Ship),
-		RawMatStats: make(map[string]*RawMatStats),
-	}
-}
-
-func (cmdr *Commander) FindShip(id int) *Ship {
-	if id <= 0 {
+func (ed *EDState) FindShip(id int) *Ship {
+	if id <= 0 || id >= len(ed.Ships) {
 		return nil
 	}
-	return cmdr.Ships[id]
+	return ed.Ships[id]
 }
 
-func (cmdr *Commander) GetShip(id int) *Ship {
-	res := cmdr.FindShip(id)
+func (ed *EDState) GetShip(id int) *Ship {
+	res := ed.FindShip(id)
 	if res == nil {
 		res = new(Ship)
-		cmdr.Ships[id] = res
+		ed.Ships[id] = res
 	}
 	return res
 }
 
-func (cmdr *Commander) SetShip(id int) (res *Ship, chg bool) {
-	if id < 0 {
-		chg = cmdr.ShipID >= 0
-		cmdr.inShip = nil
-		cmdr.ShipID = -1
-		return nil, chg
+func (ed *EDState) Journal(e watched.JounalEvent) error {
+	event, err := e.Event.PeekEvent()
+	if err != nil {
+		return err
 	}
-	chg = cmdr.ShipID != id
-	res = cmdr.GetShip(id)
-	cmdr.ShipID = id
-	cmdr.inShip = res
-	res.Berth = nil
-	return res, chg
-}
-
-// shipId == 0 => caller has no idea of id
-func (cmdr *Commander) StoreCurrentShip(shipId int) {
-	// TODO check consistency of IDs
-	cmdr.ShipID = -1
-	if cmdr.inShip == nil {
-		return
+	etype := events.EventType(event)
+	if etype == nil {
+		log.Debuga("unknown journal `event`", event)
+		return nil
 	}
-	ship := cmdr.inShip
-	cmdr.inShip = nil
-	if port := cmdr.At.Port(); port != nil {
-		ship.Berth = port
+	eh := evtHdlrs[event]
+	if eh == nil {
+		log.Debuga("no handler for `event`", event)
+		return nil
 	}
-}
-
-func (cmdr *Commander) Jump(addr uint64, t time.Time) {
-	if len(cmdr.JumpHist) < JumpHitsMax {
-		cmdr.LastJump = len(cmdr.JumpHist)
-		cmdr.JumpHist = append(cmdr.JumpHist, Jump{addr, t})
-	} else {
-		i := cmdr.LastJump + 1
-		if i >= len(cmdr.JumpHist) {
-			i = 0
-		}
-		j := &cmdr.JumpHist[i]
-		j.SysAddr = addr
-		j.Arrive = t
-		cmdr.LastJump = i
+	evt := etype.New()
+	if err = json.Unmarshal(e.Event, evt); err != nil {
+		return err
 	}
-}
-
-func (cmdr *Commander) Save(file string) error {
-	dir := filepath.Dir(file)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		log.Infoa("create `commander` `dir`", cmdr.Name, dir)
-		if err := os.Mkdir(dir, 0777); err != nil {
-			log.Errore(err)
-		}
-	}
-	log.Infoa("save `commander` with `fid` to `file`", cmdr.Name, cmdr.FID, file)
-	return SaveJSON(file, cmdr, "")
-}
-
-func (cmdr *Commander) Load(file string) error {
-	err := LoadJSON(file, true, cmdr, "load commander from `file`")
-	cmdr.inShip = cmdr.FindShip(cmdr.ShipID)
+	_, err = eh(ed, evt)
 	return err
 }
 
-type Rank struct {
-	Level    int
-	Progress int
+func (ed *EDState) Status(e watched.StatusEvent) error {
+	etype := events.EventType(e.Type.String())
+	if etype == nil {
+		log.Debuga("unknown status `event`", etype)
+		return nil
+	}
+	// TODO status event
+	return errors.New("NYI: EDState status event")
 }
 
-//go:generate stringer -type RankType
-type RankType int
-
-const (
-	Combat RankType = iota
-	Trade
-	Explore
-	CQC
-	Federation
-	Empire
-
-	RanksNum
-)
-
-type Ranks [RanksNum]Rank
-
-type Ship struct {
-	Type     string
-	Ident    ChgString
-	Name     ChgString
-	Cargo    ChgInt
-	MaxRange ChgF32
-	MaxJump  ChgF32
-	Berth    *Port      `json:",omitempty"`
-	Sold     *time.Time `json:",omitempty"`
-}
-
-type Materials struct {
-	Raw map[string]*Material
-	Man map[string]*Material
-	Enc map[string]*Material
-}
-
-type Material struct {
-	Stock  int
-	Demand int
+func (ed *EDState) Close() error {
+	// TODO status event
+	return errors.New("NYI: EDState close")
 }

@@ -1,24 +1,25 @@
 package goedx
 
 import (
+	"github.com/CmdrVasquess/goedx/att"
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
-	stdEvtHdlrs[journal.UndockedEvent.String()] = ehUndocked
+	evtHdlrs[journal.UndockedEvent.String()] = ehUndocked
 }
 
-func ehUndocked(ext *Extension, e events.Event) (chg Change) {
+func ehUndocked(ed *EDState, e events.Event) (chg att.Change, err error) {
 	evt := e.(*journal.Undocked)
-	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
-		if port := cmdr.At.Port(); port == nil {
+	err = ed.WrLocked(func() error {
+		if port := ed.Loc.Port(); port == nil {
 			port := &Port{
 				Name:   evt.StationName,
 				Type:   evt.StationType,
 				Docked: false,
 			}
-			cmdr.At.Location = port
+			ed.Loc.Location = port
 		} else {
 			port.Docked = false
 			if port.Name != evt.StationName {
@@ -29,6 +30,6 @@ func ehUndocked(ext *Extension, e events.Event) (chg Change) {
 		}
 		chg = ChgLocation
 		return nil
-	}))
-	return chg
+	})
+	return chg, err
 }

@@ -1,19 +1,20 @@
 package goedx
 
 import (
+	"github.com/CmdrVasquess/goedx/att"
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
-	stdEvtHdlrs[journal.CommanderEvent.String()] = ehCommander
+	evtHdlrs[journal.CommanderEvent.String()] = ehCommander
 }
 
-func ehCommander(ext *Extension, e events.Event) (chg Change) {
+func ehCommander(ed *EDState, e events.Event) (chg att.Change, err error) {
 	evt := e.(*journal.Commander)
-	Must(ext.EDState.Write(func() error {
-		ext.SwitchCommander(evt.FID, evt.Name)
+	err = ed.WrLocked(func() error {
+		ed.SwitchCommander(evt.FID, evt.Name)
 		return nil
-	}))
-	return chg
+	})
+	return chg, err
 }

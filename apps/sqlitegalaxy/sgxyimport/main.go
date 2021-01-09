@@ -18,8 +18,8 @@ import (
 	"git.fractalqb.de/fractalqb/sqlize"
 	"git.fractalqb.de/fractalqb/sqlize/null"
 	sgx "github.com/CmdrVasquess/goedx/apps/sqlitegalaxy"
-	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
+	"github.com/CmdrVasquess/watched"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -168,7 +168,7 @@ func importFrom(db sqlize.SQL, rd io.Reader) {
 		scn := bufio.NewScanner(rd)
 		for scn.Scan() {
 			line := scn.Bytes()
-			t, evt, err := events.Peek(line)
+			t, evt, err := watched.Peek(line)
 			if err != nil {
 				return err
 			}

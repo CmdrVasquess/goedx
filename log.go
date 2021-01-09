@@ -8,5 +8,5 @@ import (
 
 var (
 	log    = qbsllm.New(qbsllm.Lnormal, "goedx", nil, nil)
-	LogCfg = c4hgol.Config(qbsllm.NewConfig(log), watched.LogCfg)
+	LogCfg = c4hgol.Config(qbsllm.NewConfig(log), watched.LogCfg())
 )

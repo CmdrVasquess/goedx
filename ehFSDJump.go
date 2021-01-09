@@ -1,31 +1,33 @@
 package goedx
 
 import (
+	"github.com/CmdrVasquess/goedx/att"
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
-	stdEvtHdlrs[journal.FSDJumpEvent.String()] = ehFSDJump
+	evtHdlrs[journal.FSDJumpEvent.String()] = ehFSDJump
 }
 
-func ehFSDJump(ext *Extension, e events.Event) (chg Change) {
+func ehFSDJump(ed *EDState, e events.Event) (chg att.Change, err error) {
 	evt := e.(*journal.FSDJump)
 	chg = ChgSystem
-	sys, _ := ext.Galaxy.EdgxSystem(
+	sys := ed.Galaxy.EdgxSystem(
 		evt.SystemAddress,
 		evt.StarSystem,
 		evt.StarPos[:],
 		evt.Time,
 	)
-	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
-		cmdr.Jump(evt.SystemAddress, evt.Time)
-		cmdr.At.Location = sys
+	err = ed.WrLocked(func() error {
+		ed.JumpHist.Jump(evt.SystemAddress, evt.Time)
+		ed.Loc.Location = sys
+		cmdr := ed.Cmdr
 		if cmdr.inShip != nil && evt.JumpDist > float32(cmdr.inShip.MaxJump) {
 			chg |= cmdr.inShip.MaxJump.Set(evt.JumpDist, ChgShip)
 		}
 		// TODO be more precise
 		return nil
-	}))
-	return chg
+	})
+	return chg, err
 }

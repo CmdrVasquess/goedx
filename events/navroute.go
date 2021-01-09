@@ -1,8 +1,12 @@
 package events
 
+import (
+	"github.com/CmdrVasquess/watched"
+)
+
 type navrouteT string
 
-const NavRouteEvent = statusT("NavRoute")
+const NavRouteEvent = statusT(watched.StatNavRouteName)
 
 func (t navrouteT) New() Event     { return new(NavRoute) }
 func (t navrouteT) String() string { return string(t) }

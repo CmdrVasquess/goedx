@@ -7,8 +7,29 @@ import (
 	"math"
 	"time"
 
+	"github.com/CmdrVasquess/goedx/att"
+
 	"git.fractalqb.de/fractalqb/ggja"
 )
+
+type SysCoos [3]att.Float32
+
+func ToSysCoos(x, y, z float32) SysCoos {
+	return SysCoos{att.Float32(x), att.Float32(y), att.Float32(z)}
+}
+
+func (sc *SysCoos) Set(x, y, z float32, chg att.Change) (res att.Change) {
+	res |= sc[0].Set(x, chg)
+	res |= sc[1].Set(y, chg)
+	res |= sc[2].Set(z, chg)
+	return chg
+}
+
+func (sc *SysCoos) Valid() bool {
+	return !math.IsNaN(float64((*sc)[0])) &&
+		!math.IsNaN(float64((*sc)[1])) &&
+		!math.IsNaN(float64((*sc)[2]))
+}
 
 const (
 	LocTypeSystem  = "system"
@@ -48,7 +69,7 @@ func (s *System) Set(name string, coos ...float32) {
 		l = 3
 	}
 	for l--; l >= 0; l-- {
-		s.Coos[l] = ChgF32(coos[l])
+		s.Coos[l].Set(coos[l], 0)
 	}
 }
 
@@ -60,7 +81,7 @@ func (s *System) Same(name string, coos ...float32) bool {
 		return false
 	}
 	for i, r := range coos {
-		if s.Coos[i] != ChgF32(r) {
+		if s.Coos[i].Get() != r {
 			return false
 		}
 	}
@@ -98,7 +119,7 @@ func (s *System) FromMap(m map[string]interface{}) (err error) {
 		return err
 	}
 	if coos := obj.Arr("Coos"); coos == nil {
-		nan32 := ChgF32(math.NaN())
+		nan32 := att.Float32(math.NaN())
 		s.Coos[0] = nan32
 		s.Coos[1] = nan32
 		s.Coos[2] = nan32

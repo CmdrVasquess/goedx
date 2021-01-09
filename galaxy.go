@@ -3,24 +3,23 @@ package goedx
 import "time"
 
 type Galaxy interface {
-	// Extended galaxy implementations may return extended system info in the interface{}
-	EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) (*System, interface{})
+	EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) *System
 }
 
 const EchoGalaxy = echoGxy(0)
 
 type echoGxy int
 
-func (_ echoGxy) EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) (*System, interface{}) {
+func (_ echoGxy) EdgxSystem(addr uint64, name string, coos []float32, touch time.Time) *System {
 	res := NewSystem(addr, name, coos...)
 	res.FirstAccess = touch
 	res.LastAccess = touch
-	return res, nil
+	return res
 }
 
 type InMemGalaxy map[uint64]*System
 
-func (g InMemGalaxy) EdgxSystem(addr uint64, name string, coos []float32) (*System, interface{}) {
+func (g InMemGalaxy) EdgxSystem(addr uint64, name string, coos []float32) *System {
 	res := g[addr]
 	if res == nil {
 		res = NewSystem(addr, name, coos...)
@@ -33,5 +32,5 @@ func (g InMemGalaxy) EdgxSystem(addr uint64, name string, coos []float32) (*Syst
 			res.Coos[l].Set(coos[l], 0)
 		}
 	}
-	return res, nil
+	return res
 }

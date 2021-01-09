@@ -1,17 +1,18 @@
 package goedx
 
 import (
+	"github.com/CmdrVasquess/goedx/att"
 	"github.com/CmdrVasquess/goedx/events"
 	"github.com/CmdrVasquess/goedx/journal"
 )
 
 func init() {
-	stdEvtHdlrs[journal.LocationEvent.String()] = ehLocation
+	evtHdlrs[journal.LocationEvent.String()] = ehLocation
 }
 
-func ehLocation(ext *Extension, e events.Event) (chg Change) {
+func ehLocation(ed *EDState, e events.Event) (chg att.Change, err error) {
 	evt := e.(*journal.Location)
-	sys, _ := ext.Galaxy.EdgxSystem(
+	sys := ed.Galaxy.EdgxSystem(
 		evt.SystemAddress,
 		evt.StarSystem,
 		evt.StarPos[:],
@@ -29,10 +30,10 @@ func ehLocation(ext *Extension, e events.Event) (chg Change) {
 	default:
 		loc = sys
 	}
-	Must(ext.EDState.WriteCmdr(func(cmdr *Commander) error {
-		cmdr.At.Location = loc
+	err = ed.WrLocked(func() error {
+		ed.Loc.Location = loc
 		chg = ChgLocation
 		return nil
-	}))
-	return chg
+	})
+	return chg, err
 }

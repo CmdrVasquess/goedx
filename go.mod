@@ -6,7 +6,6 @@ require (
 	git.fractalqb.de/fractalqb/c4hgol v0.10.3
 	git.fractalqb.de/fractalqb/ggja v0.10.0
 	git.fractalqb.de/fractalqb/qbsllm v0.10.5
-	git.fractalqb.de/fractalqb/sllm v0.11.1 // indirect
 	github.com/CmdrVasquess/watched v0.5.4
 	github.com/mattn/go-sqlite3 v1.14.1
 	go.etcd.io/bbolt v1.3.5

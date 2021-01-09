@@ -1,10 +1,14 @@
 package events
 
+import (
+	"github.com/CmdrVasquess/watched"
+)
+
 type StatusFlag uint32
 
 type statusT string
 
-const StatusEvent = statusT("Status")
+const StatusEvent = statusT(watched.StatStatusName)
 
 func (t statusT) New() Event     { return new(Status) }
 func (t statusT) String() string { return string(t) }

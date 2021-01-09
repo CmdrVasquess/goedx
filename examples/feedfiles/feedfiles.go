@@ -15,6 +15,7 @@ import (
 	"github.com/CmdrVasquess/goedx/apps/bboltgalaxy"
 	"github.com/CmdrVasquess/goedx/apps/l10n"
 	"github.com/CmdrVasquess/goedx/events"
+	"github.com/CmdrVasquess/watched"
 )
 
 var (
@@ -33,7 +34,7 @@ func feed(rd io.Reader) {
 		if len(line) == 0 {
 			continue
 		}
-		_, evt, err := events.Peek(line)
+		evt, err := watched.PeekEvent(line)
 		if err != nil {
 			log.Errore(err)
 			log.Fatalf("[%s]", string(line))

@@ -3,7 +3,7 @@ package sqlitegalaxy
 import bsq "git.fractalqb.de/fractalqb/sqlize/buildsq"
 
 func init() {
-	bsq.InitDecls("", bsq.CamelToSnake(),
+	bsq.MustInitDecls("", bsq.CamelToSnake(),
 		&TSystems,
 		&TBodies,
 		&TPrntBdys,
